@@ -1,4 +1,8 @@
-# 進度摘要（progress.md，2026-10-05，階段 3 完成時）
+# 進度摘要（progress.md，2026-10-05，階段 5 完成時）
+
+> 階段 4、4B、5 已完成：匯出（HEX、RGB、CSS 變數、oklch()、Google 簡報 12 欄）、收藏（localStorage）、PWA（manifest、sw.js 網路優先、圖示）、
+> 複製給 AI 簡報用（YAML／完整提示詞）、audit 加入金鑰與套件檢查、`docs/deploy.md`、`docs/manual-checklist.md`。
+> 下方為階段 3 時的紀錄；新增模組：export/formats、export/ai-prompt、data/favorites、ui/export、ui/favorites、scripts/build-icons。
 
 ## 已完成
 - 階段 0：範例資料化（62 組，規則集 44／驗證集 18）、風格確認，見 `rules-extracted.md`、`palettes.csv`。

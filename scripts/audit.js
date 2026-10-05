@@ -9,6 +9,8 @@
 // 5. 介面、src/、docs/ 等不得出現原始色名或拼音（名稱清單即時讀自 reference/，不寫進本檔）。
 // 6. 網頁防護：src/ 不使用 innerHTML；不連外部網址。
 // 7. 範本庫 src/data/templates.js：不含原始色名或拼音、HEX 格式、數量一致、編號不重複、風格與來源標示。
+// 8. 金鑰與機敏檔：金鑰樣式字串、.env.example 沒有填值、.gitignore 必要項目、Git 沒有追蹤機敏檔。
+// 9. 套件：package.json 沒有 runtime dependencies。
 //
 // 執行時的實際量測（排版後的對比、元件尺寸、截斷、橫向捲軸）請用瀏覽器開啟 ?audit=1，見 src/ui/audit-dom.js。
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -109,7 +111,7 @@ for (const { selector, body } of blocks) {
 }
 
 // ---------- 4：reference/ ----------
-const webFiles = ['index.html', ...walk('src', ['.js', '.css', '.html'])];
+const webFiles = ['index.html', 'sw.js', 'manifest.webmanifest', ...walk('src', ['.js', '.css', '.html'])].filter(exists);
 const refHits = webFiles.filter((f) => /reference\//i.test(read(f)));
 check('reference/', '網頁檔案沒有引用 reference/', refHits.length === 0, refHits.join('、'));
 let tracked = [];
@@ -209,6 +211,55 @@ const urlHits = webFiles.flatMap((f) => [...read(f).matchAll(/https?:\/\/[^\s'")
   // SVG 命名空間只是識別字；localhost／127.0.0.1 是本機預覽說明，都不是對外連線
   .filter((u) => !/^https?:\/\/(www\.w3\.org\/|localhost[:/]|127\.0\.0\.1[:/])/.test(u)).map((u) => `${f}：${u}`));
 check('網頁防護', '網頁檔案沒有外部網址（不連網路）', urlHits.length === 0, urlHits.slice(0, 5).join('；'));
+// 網路 API：只允許 sw.js 用 fetch 取「同網域」檔案；其他網頁檔不得使用任何網路 API
+const NET_API = /\bfetch\s*\(|XMLHttpRequest|sendBeacon|new\s+WebSocket|EventSource|importScripts\s*\(/;
+const netHits = webFiles.filter((f) => f !== 'sw.js' && NET_API.test(read(f)));
+check('網頁防護', '網頁程式沒有網路請求（fetch、XHR、WebSocket 等）', netHits.length === 0, netHits.join('、'));
+if (exists('sw.js')) {
+  check('網頁防護', 'sw.js 只處理同網域 GET 請求', /origin !== self\.location\.origin\) return/.test(read('sw.js')));
+}
+
+// ---------- 8：金鑰與機敏檔（階段 5） ----------
+// 樣式涵蓋常見服務的金鑰格式；只回報檔名與種類，不印出內容
+const SECRET_PATTERNS = [
+  ['AWS Access Key', /AKIA[0-9A-Z]{16}/],
+  ['OpenAI／Anthropic Key', /\bsk-(?:ant-)?[A-Za-z0-9_-]{20,}/],
+  ['GitHub Token', /\bgh[pousr]_[A-Za-z0-9]{30,}/],
+  ['Google API Key', /AIza[0-9A-Za-z_-]{35}/],
+  ['Slack Token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
+  ['Notion Token', /\b(?:secret|ntn)_[A-Za-z0-9]{30,}/],
+  ['私鑰', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
+  ['寫死的密碼', /\b(?:password|passwd|api[_-]?key|secret)\s*[:=]\s*['"][^'"\s]{6,}['"]/i],
+];
+const secretFiles = [...new Set([
+  ...webFiles,
+  ...walk('scripts', ['.js']), ...walk('tests', ['.js']), ...walk('docs', ['.md', '.csv']),
+  ...['README.md', 'SPEC.md', 'DESIGN.md', 'CLAUDE.md', 'package.json', '.env.example', '.gitignore'].filter(exists),
+])];
+const secretHits = secretFiles.flatMap((f) => SECRET_PATTERNS.filter(([, re]) => re.test(read(f))).map(([name]) => `${f}（${name}）`));
+check('金鑰與機敏檔', `${secretFiles.length} 個檔案沒有金鑰樣式字串`, secretHits.length === 0, secretHits.join('、'));
+if (exists('.env.example')) {
+  const values = read('.env.example').split(/\r?\n/).filter((l) => /^[A-Z_]+=\S/.test(l));
+  check('金鑰與機敏檔', '.env.example 只有變數名稱、沒有填值', values.length === 0, values.map((l) => l.split('=')[0]).join('、'));
+}
+const gi = exists('.gitignore') ? read('.gitignore') : '';
+const mustIgnore = ['node_modules/', '.env', '.env.*', 'reference/', '*.log', '.DS_Store', '*.pem', '*.key'];
+const missingIgnore = mustIgnore.filter((p) => !gi.split(/\r?\n/).map((l) => l.trim()).includes(p));
+check('金鑰與機敏檔', '.gitignore 含必要項目（.env、金鑰檔、reference/ 等）', missingIgnore.length === 0, missingIgnore.join('、'));
+try {
+  const all = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+  const risky = all.filter((f) => /(^|\/)\.env($|\.)(?!example$)|\.pem$|\.key$|credentials.*\.json$|serviceAccountKey.*\.json$|\.clasprc\.json$/i.test(f));
+  check('金鑰與機敏檔', 'Git 沒有追蹤 .env、金鑰檔、憑證檔', risky.length === 0, risky.join('、'));
+} catch {
+  check('金鑰與機敏檔', 'Git 追蹤檔案檢查（無法執行 git，略過）', true);
+}
+
+// ---------- 9：套件 ----------
+const pkg = JSON.parse(read('package.json'));
+const deps = Object.keys(pkg.dependencies ?? {});
+check('套件', 'package.json 沒有 runtime dependencies', deps.length === 0, deps.join('、'));
+const devDeps = Object.keys(pkg.devDependencies ?? {});
+check('套件', `devDependencies：${devDeps.length ? devDeps.join('、') : '無'}`, true);
 
 // ---------- 輸出 ----------
 let failed = 0;

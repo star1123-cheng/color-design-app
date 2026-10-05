@@ -4,7 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#F5F1EA">
+  <meta name="description" content="選一個顏色，自動推薦主色、輔色、底色、字色、點綴色">
   <title>配色推薦</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="src/ui/styles.css">
 </head>
 <body>
@@ -19,7 +24,7 @@
           <button type="button" data-mode="teacher" aria-pressed="false" aria-label="老師模式">老師</button>
           <button type="button" data-mode="public" aria-pressed="true" aria-label="大眾模式">大眾</button>
         </div>
-        <button type="button" class="btn desktop-only" data-soon="收藏功能即將推出" aria-disabled="true" data-icon="bookmark">收藏</button>
+        <a class="btn desktop-only" href="#saved" data-icon="bookmark">收藏</a>
         <button type="button" class="btn btn-solid desktop-only" id="copy-all-top" data-icon="copy">複製全部 HEX</button>
       </div>
     </div>
@@ -147,9 +152,18 @@
           <span class="mono-note desktop-only">60 · 30 · 10</span>
         </div>
         <ul class="role-list" id="role-list"></ul>
-        <button type="button" class="btn btn-primary" id="copy-all"></button>
-        <pre class="code" id="code" aria-label="色碼清單"></pre>
+        <button type="button" class="btn fav-add" id="fav-add" data-icon="bookmark">加入收藏</button>
       </div>
+      <div class="panel" id="export-panel"></div>
+    </section>
+
+    <section class="saved" id="saved" aria-labelledby="saved-title">
+      <div class="sechead">
+        <span class="pageno">收藏</span>
+        <h2 id="saved-title">我的收藏</h2>
+      </div>
+      <p class="hint" id="saved-empty">還沒有收藏。看到喜歡的配色，按「加入收藏」就會存在這台裝置上。</p>
+      <ul class="fav-list" id="fav-list" aria-label="收藏清單"></ul>
     </section>
   </main>
 
@@ -157,7 +171,7 @@
     <a class="navlink" href="#pick" data-nav="pick"></a>
     <a class="navlink" href="#preview" data-nav="preview"></a>
     <a class="navlink" href="#roles" data-nav="roles"></a>
-    <a class="navlink" href="#" data-nav="saved" aria-disabled="true"></a>
+    <a class="navlink" href="#saved" data-nav="saved"></a>
   </nav>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

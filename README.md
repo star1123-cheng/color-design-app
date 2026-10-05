@@ -43,9 +43,10 @@ npm run audit
 
 - `npm run dev`：啟動本機預覽，用瀏覽器開 `http://localhost:8080/`。停止請在終端機按 Ctrl + C。
 - `npm run dev:lan`：讓同一個 Wi-Fi 的手機也能開（終端機會列出 `http://192.168.x.x:8080/` 之類的網址）。開著時同網路的任何人都看得到，用完請立刻按 Ctrl + C。
-- `npm run audit`：介面靜態檢查（文字對比度、觸控目標、reference/、原始名稱、innerHTML、外部網址）。
+- `npm run audit`：安全與介面靜態檢查（金鑰樣式字串、機敏檔、runtime dependencies、外部網址與網路請求、文字對比度、觸控目標、reference/、原始名稱、innerHTML）。部署前一定要通過。
 - 瀏覽器實測：網址加上 `?audit=1`（例如 `http://localhost:8080/?audit=1`），按 F12 開 Console 看結果（對比度、觸控目標、文字截斷、橫向捲軸）。
-- 預覽伺服器只提供 `index.html` 與 `src/`，`reference/`、`docs/`、`.git/` 都讀不到。
+- 預覽伺服器只提供 `index.html`、`manifest.webmanifest`、`sw.js`、`src/` 與 `icons/`，`reference/`、`docs/`、`.git/` 都讀不到。
+- `node scripts/build-icons.js`：重新產生 PWA 圖示 `icons/`（不需圖片套件）。
 - `npm test`：執行全部測試（不需安裝任何套件）。
 - `demo.js`：在終端機印出推薦結果；可加場景（`slides`、`worksheet`、`webpage`、`poster`）與 `--projection`。
 - `build-palettes.js`：重新產生 `docs/palettes.csv`（範例色票資料表）。
@@ -54,9 +55,11 @@ npm run audit
 
 ## 資料夾說明
 
-- `index.html`、`src/main.js`、`src/ui/`：介面（大眾模式為預設）。
-- `src/color/`：色彩引擎（色彩換算、色域修正、對比度、配色推薦、漸層、範圍驗證）。
-- `src/data/`：資料格式驗證與場景預設。
+- `index.html`、`src/main.js`、`src/state.js`、`src/ui/`：介面（大眾模式為預設）。
+- `src/color/`：色彩引擎（色彩換算、色域修正、對比度、配色推薦、漸層、範圍驗證、色弱與灰階、圖片取色）。
+- `src/data/`：資料格式驗證、場景預設、範本庫、收藏（localStorage）。
+- `src/export/`：匯出格式、色票卡 PNG、「複製給 AI 簡報用」。
+- `manifest.webmanifest`、`sw.js`、`icons/`：PWA（可加入主畫面、離線使用）。
 - `tests/`：`node:test` 測試。
 - `scripts/`：示範與範例資料整理腳本。
 - `docs/`：規則整理、引擎報告、規則修改紀錄、部署說明。
@@ -66,4 +69,7 @@ npm run audit
 
 - [x] 階段 0：初始化與範例資料化（見 `docs/rules-extracted.md`）
 - [x] 階段 1：色彩引擎與測試（見 `docs/engine-report.md`）
-- [ ] 階段 2：基礎 UI（已實作，待使用者驗收）
+- [x] 階段 2：基礎 UI；階段 2.5：範本庫
+- [x] 階段 3：老師模式與大眾模式功能
+- [x] 階段 4：匯出、收藏與 PWA；階段 4B：複製給 AI 簡報用
+- [x] 階段 5：安全檢查與部署（見 `docs/deploy.md`、`docs/manual-checklist.md`）

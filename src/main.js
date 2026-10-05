@@ -10,6 +10,9 @@ import { renderRoles } from './ui/roles.js';
 import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
 import { renderStyleChips, renderShareCard } from './ui/public.js';
 import { initImagePick } from './ui/image-pick.js';
+import { renderExport } from './ui/export.js';
+import { renderFavorites } from './ui/favorites.js';
+import { loadFavorites, addFavorite, removeFavorite, renameFavorite } from './data/favorites.js';
 import { h, icon, mount } from './ui/dom.js';
 import { toast } from './ui/copy.js';
 import { TEMPLATES } from './data/templates.js';
@@ -22,8 +25,12 @@ const $ = (id) => document.getElementById(id);
 const TEMPLATE_LIST = TEMPLATES.filter((t) => t.status === '收錄').map((t) => ({ t, palette: toPalette(t) }));
 const ALL = '全部';
 
-let state = S.createState({ styleFilter: ALL, templateId: TEMPLATE_LIST[0]?.t.id ?? null });
+// fav：目前套用中的收藏（選色、換卡片、重新推薦時清除）
+let state = S.createState({ styleFilter: ALL, templateId: TEMPLATE_LIST[0]?.t.id ?? null, format: 'hex', aiFormat: 'yaml', fav: null });
 let palettes = [];
+const loaded = loadFavorites();
+let favorites = loaded.palettes;
+if (loaded.error) setTimeout(() => toast(loaded.error), 300);
 
 const filteredTemplates = () => TEMPLATE_LIST.filter(({ t }) => state.styleFilter === ALL || t.style === state.styleFilter);
 const currentTemplate = () => TEMPLATE_LIST.find(({ t }) => t.id === state.templateId) ?? null;
@@ -35,14 +42,16 @@ const showingTemplates = () => state.mode === 'public' && state.view === 'templa
 
 /** 目前套用中的配色（推薦或範本）；老師模式含字級微調 */
 function activePalette() {
+  if (state.fav) return state.fav;
   if (showingTemplates() && currentTemplate()) return currentTemplate().palette;
   return S.withTypography(palettes[state.selected], state);
 }
 
-/** 更新狀態；recompute 為 true 時重新推薦 */
-function set(next, { recompute = false } = {}) {
+/** 更新狀態；recompute 為 true 時重新推薦（並結束套用中的收藏，除非 keepFav） */
+function set(next, { recompute = false, keepFav = false } = {}) {
   state = next;
   if (recompute) {
+    if (!keepFav) state = { ...state, fav: null };
     palettes = recommend(state.hex, S.recommendOptions(state));
     if (state.selected >= palettes.length) state = { ...state, selected: 0 };
   }
@@ -99,7 +108,7 @@ function render() {
   } else {
     $('recs-title').textContent = `為你配好的 ${palettes.length} 組`;
     $('cards').classList.remove('is-templates');
-    renderCards($('cards'), palettes, state.selected, (i) => set({ ...state, selected: i }));
+    renderCards($('cards'), palettes, state.fav ? -1 : state.selected, (i) => set({ ...state, selected: i, fav: null }));
   }
 
   // 預覽與檢查：老師模式有模擬檢視、字級與版面建議；大眾模式有色票卡
@@ -114,7 +123,20 @@ function render() {
   $('share-panel').hidden = teacher;
   if (!teacher) renderShareCard($('share-panel'), palette);
 
-  renderRoles($('role-list'), $('copy-all'), $('code'), palette, [$('copy-all-top')]);
+  renderRoles($('role-list'), palette, [$('copy-all-top')]);
+  renderExport($('export-panel'), palette, state, {
+    onFormat: (format) => set({ ...state, format }),
+    onAiFormat: (aiFormat) => set({ ...state, aiFormat }),
+  });
+  renderFavorites($('fav-list'), $('saved-empty'), favorites, {
+    onApply: (p) => {
+      set({ ...S.pickColor(state, p.colors.primary.hex), fav: p }, { recompute: true, keepFav: true });
+      toast(`已套用收藏「${p.name}」`);
+      $('preview').scrollIntoView();
+    },
+    onRemove: (id) => { const r = removeFavorite(id); favorites = r.palettes; toast(r.message); render(); },
+    onRename: (id, name) => { const r = renameFavorite(id, name); favorites = r.palettes; toast(r.message); render(); },
+  });
   document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
   document.querySelectorAll('[data-preview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preview === state.previewType)));
 }
@@ -170,14 +192,19 @@ document.querySelectorAll('[data-soon]').forEach((el) => el.addEventListener('cl
   toast(el.dataset.soon);
 }));
 
-// 底部導覽（手機）：推薦、預覽、匯出、收藏（收藏在階段 4）
+// 加入收藏（目前套用中的配色，含字級微調）
+$('fav-add').addEventListener('click', () => {
+  const r = addFavorite(activePalette());
+  favorites = r.palettes;
+  toast(r.message);
+  render();
+});
+
+// 底部導覽（手機）：推薦、預覽、匯出、收藏
 const NAV = { pick: ['palette', '推薦'], preview: ['eye', '預覽'], roles: ['share', '匯出'], saved: ['bookmark', '收藏'] };
 document.querySelectorAll('[data-nav]').forEach((a) => {
   const [ic, label] = NAV[a.dataset.nav];
   mount(a, h('span', { class: 'navicon' }, icon(ic)), h('span', { class: 'navlabel' }, label));
-  if (a.getAttribute('aria-disabled') === 'true') {
-    a.addEventListener('click', (e) => { e.preventDefault(); toast('收藏功能即將推出'); });
-  }
 });
 if ('IntersectionObserver' in window) {
   const links = [...document.querySelectorAll('[data-nav]:not([aria-disabled])')];
@@ -188,10 +215,15 @@ if ('IntersectionObserver' in window) {
       links.forEach((l) => (l.dataset.nav === id ? l.setAttribute('aria-current', 'true') : l.removeAttribute('aria-current')));
     }
   }, { rootMargin: '-40% 0px -55% 0px' });
-  ['pick', 'recs', 'preview', 'roles'].forEach((id) => io.observe($(id)));
+  ['pick', 'recs', 'preview', 'roles', 'saved'].forEach((id) => io.observe($(id)));
 }
 
 set(state, { recompute: true });
+
+// 離線使用（PWA）：只在安全環境（https 或 localhost）註冊；手機以區網 http 開啟時瀏覽器不支援
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('./sw.js').catch(() => { /* 註冊失敗不影響一般使用 */ });
+}
 
 // 介面自我檢查：網址加上 ?audit=1 時，量測文字對比度、觸控目標、截斷與橫向捲軸（結果印在 Console）
 if (new URLSearchParams(location.search).has('audit')) {

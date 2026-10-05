@@ -4,7 +4,7 @@
 //   停止：在終端機按 Ctrl + C
 //
 // 安全設計：
-// - 白名單：只提供 index.html 與 src/ 底下的網頁檔，其他路徑一律 404。
+// - 白名單：只提供 index.html、manifest.webmanifest、sw.js 與 src/、icons/ 底下的網頁檔，其他路徑一律 404。
 //   reference/（範例圖片）、docs/、.git/、SPEC.md 等都不會被送出。
 // - 只接受 GET、HEAD；擋掉 ../ 路徑穿越與隱藏檔。
 import { createServer } from 'node:http';
@@ -42,8 +42,8 @@ export function resolveRequest(urlPath) {
   const norm = path.posix.normalize(p);
   if (!norm.startsWith('/') || norm.split('/').some((seg) => seg === '..' || seg.startsWith('.'))) return null;
   const rel = norm.slice(1);
-  if (rel === 'index.html') return rel;
-  if (rel.startsWith('src/') && TYPES[path.posix.extname(rel)]) return rel;
+  if (['index.html', 'manifest.webmanifest', 'sw.js'].includes(rel)) return rel;
+  if ((rel.startsWith('src/') || rel.startsWith('icons/')) && TYPES[path.posix.extname(rel)]) return rel;
   return null;
 }
 

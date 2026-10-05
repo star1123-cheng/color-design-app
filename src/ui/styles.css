@@ -104,7 +104,7 @@ button, input[type="color"], input[type="text"], input[type="range"], a.navlink 
   padding: 8px var(--gutter) 24px;
   display: grid; gap: 28px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "pick" "recs" "preview" "roles";
+  grid-template-areas: "pick" "recs" "preview" "roles" "saved";
 }
 .pick { grid-area: pick; min-width: 0; }
 .recs { grid-area: recs; min-width: 0; }
@@ -468,6 +468,27 @@ input[type="range"]::-moz-range-thumb {
 .role-name { font-size: 13px; color: var(--ink-2); }
 .role-hex { font-family: var(--font-mono); font-size: 16px; color: var(--ink); letter-spacing: 0.03em; }
 
+a.btn { min-height: var(--tap); text-decoration: none; }
+.fav-add { width: 100%; margin-top: 12px; }
+.chips-wrap { flex-wrap: wrap; overflow: visible; padding: 0; margin: 0 0 4px; }
+.ai-head { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--hair); }
+.ai-head + .hint { margin: 0 0 12px; }
+#export-panel .chips-wrap + .code { margin-top: 12px; }
+
+/* ---------- 收藏 ---------- */
+.saved { grid-area: saved; min-width: 0; }
+.fav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.fav {
+  display: grid; gap: 10px; padding: 16px; border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.fav .ratio { height: 44px; }
+input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; font-weight: 700; letter-spacing: 0; height: 44px; }
+.fav-actions { display: flex; gap: 8px; }
+.fav-actions .btn { flex: 1; }
+
 .code {
   margin: 16px 0 0; padding: 18px 20px; border-radius: var(--r-md); overflow-x: auto;
   font-family: var(--font-mono); font-size: 14px; line-height: 1.8;
@@ -514,7 +535,7 @@ input[type="range"]::-moz-range-thumb {
 @media (min-width: 800px) and (max-width: 1023px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas: "pick preview" "recs recs" "roles roles";
+    grid-template-areas: "pick preview" "recs recs" "roles roles" "saved saved";
   }
 }
 
@@ -532,7 +553,7 @@ input[type="range"]::-moz-range-thumb {
   .layout {
     padding: 32px 40px 24px; gap: 24px;
     grid-template-columns: 320px minmax(0, 1fr);
-    grid-template-areas: "pick preview" "pick roles" "recs recs";
+    grid-template-areas: "pick preview" "pick roles" "recs recs" "saved saved";
     align-items: start;
   }
 
