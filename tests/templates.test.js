@@ -5,7 +5,7 @@ import { TEMPLATES, TEMPLATE_COUNT } from '../src/data/templates.js';
 import { toPalette, checkTemplate, TEMPLATE_STYLES, SOURCE_SAMPLE, SOURCE_ENGINE } from '../src/data/template-palette.js';
 import { validatePalette, ROLES } from '../src/data/schema.js';
 import { CONTRAST } from '../src/color/contrast.js';
-import { buildTemplates } from '../scripts/build-templates.js';
+import { buildTemplates, DISCARDED_IDS } from '../scripts/build-templates.js';
 import { buildRows } from '../scripts/build-palettes.js';
 
 test('templates.js 與產生腳本輸出完全一致（沒有手動改色）', () => {
@@ -14,10 +14,14 @@ test('templates.js 與產生腳本輸出完全一致（沒有手動改色）', (
   assert.equal(TEMPLATE_COUNT, TEMPLATES.length);
 });
 
-test('收錄 52 組非漸層範例；編號 T-001 起連續、不重複', () => {
+test('非漸層範例扣除使用者捨棄者；編號遞增、不重複，捨棄的編號保留空號', () => {
   const nonGradient = buildRows().filter((r) => !r.gradient).length;
-  assert.equal(TEMPLATES.length, nonGradient);
-  TEMPLATES.forEach((t, i) => assert.equal(t.id, `T-${String(i + 1).padStart(3, '0')}`));
+  assert.equal(TEMPLATES.length, nonGradient - DISCARDED_IDS.length);
+  const nums = TEMPLATES.map((t) => Number(t.id.slice(2)));
+  nums.forEach((n, i) => { if (i) assert.ok(n > nums[i - 1], TEMPLATES[i].id); });
+  for (const id of DISCARDED_IDS) assert.equal(TEMPLATES.some((t) => t.id === id), false, id);
+  const expected = Array.from({ length: nonGradient }, (_, i) => `T-${String(i + 1).padStart(3, '0')}`).filter((id) => !DISCARDED_IDS.includes(id));
+  assert.deepEqual(TEMPLATES.map((t) => t.id), expected);
 });
 
 test('格式：五個角色 HEX、風格只用 SPEC 4.6、每個角色都標示來源', () => {

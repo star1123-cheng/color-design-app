@@ -67,7 +67,8 @@ export function auditTruncation() {
   const fails = [];
   let checked = 0;
   for (const el of document.body.querySelectorAll('*')) {
-    if (!visible(el) || el.closest('[data-user-color]') || ['INPUT', 'SVG', 'svg', 'path', 'SCRIPT'].includes(el.tagName)) continue;
+    // .visually-hidden 是給螢幕閱讀器的文字，刻意縮成 1 px，不算截斷
+    if (!visible(el) || el.closest('[data-user-color], .visually-hidden') || ['INPUT', 'SVG', 'svg', 'path', 'SCRIPT'].includes(el.tagName)) continue;
     if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
     checked++;
     const cs = getComputedStyle(el);

@@ -10,6 +10,7 @@
 // - 不事後改色。檢查未通過者標為「待決定」，網頁不顯示，列給使用者決定。
 // - 漸層色票不收錄（沒有五個角色）。
 // - 編號 T-001 起，依 SPEC 4.6 風格順序 → 範例編號排序後重新編號；範例編號只出現在本腳本的終端機輸出。
+// - 使用者決定捨棄的範本列在 DISCARDED_IDS，不寫入 templates.js（編號保留空號）。
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildRows } from './build-palettes.js';
@@ -21,6 +22,10 @@ import {
 } from '../src/data/template-palette.js';
 
 const ROLE_KEY = { 主色: 'primary', 輔色: 'secondary', 底色: 'background', 字色: 'text', 點綴色: 'accent' };
+
+// 使用者決定捨棄的範本（2026-10-05）：點綴色對底色未達 3:1（SPEC 4.3 圖形元件）。
+// 編號先依全部 52 組排定再移除，其他範本的編號不變。
+export const DISCARDED_IDS = ['T-007', 'T-033', 'T-042'];
 const ROLES = Object.keys(ROLE_LABELS);
 
 /** 由一組範例色票建立範本（不含編號） */
@@ -57,7 +62,9 @@ export function makeTemplate(row) {
 export function buildTemplates() {
   const rows = buildRows().filter((r) => !r.gradient);
   rows.sort((a, b) => TEMPLATE_STYLES.indexOf(a.style) - TEMPLATE_STYLES.indexOf(b.style) || Number(a.no) - Number(b.no));
-  return rows.map((row, i) => ({ id: `T-${String(i + 1).padStart(3, '0')}`, ...makeTemplate(row), sampleNo: row.no }));
+  return rows
+    .map((row, i) => ({ id: `T-${String(i + 1).padStart(3, '0')}`, ...makeTemplate(row), sampleNo: row.no }))
+    .filter((t) => !DISCARDED_IDS.includes(t.id));
 }
 
 function toSource(list) {

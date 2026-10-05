@@ -1,14 +1,20 @@
-// 程式入口：保存狀態、串接各元件。色彩計算一律呼叫 src/color/，不另寫第二份。
+// 程式入口：保存狀態、串接各元件。色彩計算一律呼叫 src/color/，狀態變更規則在 src/state.js（可測試）。
 import { recommend } from './color/palette.js';
 import { hexToOklch } from './color/oklch.js';
+import { CONTRAST } from './color/contrast.js';
+import { minTextContrast } from './data/presets.js';
 import { initPicker, renderPicker } from './ui/picker.js';
 import { renderCards } from './ui/cards.js';
 import { renderPreview, renderChecks } from './ui/preview.js';
 import { renderRoles } from './ui/roles.js';
+import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
+import { renderStyleChips, renderShareCard } from './ui/public.js';
+import { initImagePick } from './ui/image-pick.js';
 import { h, icon, mount } from './ui/dom.js';
 import { toast } from './ui/copy.js';
 import { TEMPLATES } from './data/templates.js';
 import { toPalette, filledRoles, TEMPLATE_STYLES } from './data/template-palette.js';
+import * as S from './state.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,17 +22,8 @@ const $ = (id) => document.getElementById(id);
 const TEMPLATE_LIST = TEMPLATES.filter((t) => t.status === '收錄').map((t) => ({ t, palette: toPalette(t) }));
 const ALL = '全部';
 
-const state = {
-  hex: '#78A5CE',               // 目前選色（SPEC 第 9 節示範色）
-  base: hexToOklch('#78A5CE'),  // 明度滑桿以這個顏色的 C、H 為準
-  mode: 'public',               // 階段 2 預設大眾模式；老師模式專屬功能在階段 3
-  view: 'recs',                 // recs：為你推薦；templates：範本庫（只在大眾模式）
-  previewType: 'slides',
-  palettes: [],
-  selected: 0,
-  styleFilter: ALL,
-  templateId: TEMPLATE_LIST[0]?.t.id ?? null,
-};
+let state = S.createState({ styleFilter: ALL, templateId: TEMPLATE_LIST[0]?.t.id ?? null });
+let palettes = [];
 
 const filteredTemplates = () => TEMPLATE_LIST.filter(({ t }) => state.styleFilter === ALL || t.style === state.styleFilter);
 const currentTemplate = () => TEMPLATE_LIST.find(({ t }) => t.id === state.templateId) ?? null;
@@ -34,11 +31,22 @@ const templateTags = (p) => {
   const { t } = TEMPLATE_LIST.find((x) => x.palette === p);
   return [{ text: t.id }, { text: t.style }, ...(filledRoles(t).length ? [{ text: '含補色', sand: true }] : [])];
 };
+const showingTemplates = () => state.mode === 'public' && state.view === 'templates';
 
-/** 目前套用中的配色（推薦或範本） */
+/** 目前套用中的配色（推薦或範本）；老師模式含字級微調 */
 function activePalette() {
-  if (state.view === 'templates' && currentTemplate()) return currentTemplate().palette;
-  return state.palettes[state.selected];
+  if (showingTemplates() && currentTemplate()) return currentTemplate().palette;
+  return S.withTypography(palettes[state.selected], state);
+}
+
+/** 更新狀態；recompute 為 true 時重新推薦 */
+function set(next, { recompute = false } = {}) {
+  state = next;
+  if (recompute) {
+    palettes = recommend(state.hex, S.recommendOptions(state));
+    if (state.selected >= palettes.length) state = { ...state, selected: 0 };
+  }
+  render();
 }
 
 function renderStyleFilter() {
@@ -46,22 +54,42 @@ function renderStyleFilter() {
   const options = [[ALL, TEMPLATE_LIST.length], ...TEMPLATE_STYLES.filter((s) => counts[s] > 0).map((s) => [s, counts[s]])];
   mount($('style-filter'), options.map(([s, n]) => h('button', {
     type: 'button', class: 'chip', 'aria-pressed': String(state.styleFilter === s),
-    on: { click: () => { state.styleFilter = s; const first = filteredTemplates()[0]; if (first) applyTemplate(first.t.id); else render(); } },
+    on: {
+      click: () => {
+        state = { ...state, styleFilter: s };
+        const first = filteredTemplates()[0];
+        if (first) applyTemplate(first.t.id); else render();
+      },
+    },
   }, `${s} ${n}`)));
 }
 
 function render() {
-  const showTemplates = state.mode === 'public' && state.view === 'templates';
+  const teacher = state.mode === 'teacher';
+  const tpl = showingTemplates();
   const palette = activePalette();
-  const softened = !showTemplates && palette.checks.warnings.some((w) => w.includes('柔化'));
+  document.body.dataset.mode = state.mode;
+
+  const softened = !tpl && palette.checks.warnings.some((w) => w.includes('柔化'));
   renderPicker({ hex: state.hex, softened });
 
-  $('view-switch').hidden = state.mode !== 'public';
-  $('style-filter').hidden = !showTemplates;
-  $('tpl-hint').hidden = !showTemplates;
-  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === (showTemplates ? 'templates' : 'recs'))));
+  // 推薦區上方：老師是場景與投影，大眾是配色來源與風格
+  $('teacher-bar').hidden = !teacher;
+  $('public-bar').hidden = teacher;
+  if (teacher) {
+    renderSceneBar($('scene-chips'), $('projection-switch'), state, {
+      onScene: (scene) => set(S.setScene(state, scene), { recompute: true }),
+      onProjection: (on) => set(S.setProjection(state, on), { recompute: true }),
+    });
+  } else {
+    $('style-block').hidden = tpl;
+    if (!tpl) renderStyleChips($('style-chips'), $('style-hint'), state.style, (style) => set(S.setStyle(state, style), { recompute: true }));
+  }
+  $('style-filter').hidden = !tpl;
+  $('tpl-hint').hidden = !tpl;
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === (tpl ? 'templates' : 'recs'))));
 
-  if (showTemplates) {
+  if (tpl) {
     const list = filteredTemplates();
     $('recs-title').textContent = `範本庫 ${list.length} 組`;
     renderStyleFilter();
@@ -69,53 +97,57 @@ function render() {
     renderCards($('cards'), list.map((x) => x.palette), list.findIndex(({ t }) => t.id === state.templateId),
       (i) => applyTemplate(list[i].t.id), { tags: templateTags, showWarnings: false });
   } else {
-    $('recs-title').textContent = `為你配好的 ${state.palettes.length} 組`;
+    $('recs-title').textContent = `為你配好的 ${palettes.length} 組`;
     $('cards').classList.remove('is-templates');
-    renderCards($('cards'), state.palettes, state.selected, (i) => { state.selected = i; render(); });
+    renderCards($('cards'), palettes, state.selected, (i) => set({ ...state, selected: i }));
   }
 
-  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'));
-  renderChecks($('checks'), palette);
+  // 預覽與檢查：老師模式有模擬檢視、字級與版面建議；大眾模式有色票卡
+  $('sim-block').hidden = !teacher;
+  if (teacher) renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
+  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'), teacher ? state.simulate : 'none');
+  renderChecks($('checks'), palette, teacher
+    ? { teacher: true, minText: minTextContrast(state.scene, state.projection), projection: state.projection }
+    : { minText: CONTRAST.text });
+  $('typo-panel').hidden = !teacher;
+  if (teacher) renderTypography($('typo-panel'), state, (key, delta) => set(S.adjustTypography(state, key, delta)));
+  $('share-panel').hidden = teacher;
+  if (!teacher) renderShareCard($('share-panel'), palette);
+
   renderRoles($('role-list'), $('copy-all'), $('code'), palette, [$('copy-all-top')]);
   document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
   document.querySelectorAll('[data-preview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preview === state.previewType)));
-  $('mode-hint').hidden = state.mode !== 'teacher';
-}
-
-function update({ keepSelection = false } = {}) {
-  state.palettes = recommend(state.hex, { mode: state.mode, scene: 'slides' });
-  if (!keepSelection || state.selected >= state.palettes.length) state.selected = 0;
-  render();
 }
 
 /** 套用範本：五個角色與預覽改用範本；主色同步到選色區，推薦也依新主色重算（切回「為你推薦」時一致） */
 function applyTemplate(id) {
   const item = TEMPLATE_LIST.find(({ t }) => t.id === id);
   if (!item) return;
-  state.templateId = id;
-  state.view = 'templates';
-  state.hex = item.t.colors.primary;
-  state.base = hexToOklch(state.hex);
-  update();
+  const hex = item.t.colors.primary;
+  set({ ...state, templateId: id, view: 'templates', hex, base: hexToOklch(hex), selected: 0 }, { recompute: true });
 }
 
 initPicker({
   getBase: () => state.base,
   onPick: (hex, { rebase }) => {
     if (hex === state.hex && !rebase) return;
-    state.hex = hex;
-    if (rebase) state.base = hexToOklch(hex);
-    state.view = 'recs'; // 自己選色時，回到「為你推薦」
-    update();
+    set(S.pickColor(state, hex, { rebase }), { recompute: true }); // 自己選色時，回到「為你推薦」
   },
 });
 
-// 模式切換：保留目前選色；範本庫只在大眾模式
+initImagePick({
+  button: $('image-btn'),
+  input: $('image-input'),
+  panel: $('extract-panel'),
+  onPick: (hex) => {
+    set(S.pickColor(state, hex), { recompute: true });
+    toast(`已用 ${hex} 當主色`);
+  },
+});
+
+// 模式切換：保留目前選色（規則見 src/state.js 的 switchMode）
 document.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => {
-  if (state.mode === btn.dataset.mode) return;
-  state.mode = btn.dataset.mode;
-  if (state.mode !== 'public') state.view = 'recs';
-  update({ keepSelection: true });
+  set(S.switchMode(state, btn.dataset.mode), { recompute: true });
 }));
 
 document.querySelectorAll('[data-view]').forEach((btn) => btn.addEventListener('click', () => {
@@ -123,14 +155,12 @@ document.querySelectorAll('[data-view]').forEach((btn) => btn.addEventListener('
     const first = currentTemplate() ?? filteredTemplates()[0];
     if (first) applyTemplate(first.t.id);
   } else {
-    state.view = 'recs';
-    render();
+    set({ ...state, view: 'recs' });
   }
 }));
 
 document.querySelectorAll('[data-preview]').forEach((btn) => btn.addEventListener('click', () => {
-  state.previewType = btn.dataset.preview;
-  render();
+  set({ ...state, previewType: btn.dataset.preview });
 }));
 
 // 按鈕圖示（data-icon）與尚未開放的功能（data-soon）
@@ -161,7 +191,7 @@ if ('IntersectionObserver' in window) {
   ['pick', 'recs', 'preview', 'roles'].forEach((id) => io.observe($(id)));
 }
 
-update();
+set(state, { recompute: true });
 
 // 介面自我檢查：網址加上 ?audit=1 時，量測文字對比度、觸控目標、截斷與橫向捲軸（結果印在 Console）
 if (new URLSearchParams(location.search).has('audit')) {

@@ -242,6 +242,70 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 700;
 }
 #tpl-hint { margin: 0 0 10px; }
+.chip[aria-disabled="true"] { cursor: not-allowed; border-style: dashed; color: var(--ink-3); }
+
+/* ---------- 模式專屬列（老師：場景＋投影；大眾：來源＋風格） ---------- */
+.mode-bar { margin-bottom: 8px; }
+.bar-label { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); letter-spacing: 0.06em; }
+#style-hint { margin: 0 0 12px; }
+
+/* 開關（DESIGN 第 5 節：button role="switch"，點擊區 ≥ 44 px） */
+.switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; margin: 4px 0 8px; padding: 10px 16px; text-align: left; cursor: pointer;
+  border: 1px solid var(--hair); border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.switch-text { display: grid; gap: 2px; min-width: 0; }
+.switch-title { font-size: 15px; font-weight: 700; }
+.switch-desc { font-size: 13px; color: var(--ink-2); }
+.switch-track {
+  position: relative; flex: 0 0 48px; width: 48px; height: 28px; border-radius: 999px;
+  background: var(--sand-pale);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+.switch-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(52, 44, 37, 0.3);
+  transition: transform 0.15s;
+}
+.switch[aria-checked="true"] .switch-track {
+  background: var(--mist-deep);
+  color: var(--cream);
+  box-shadow: none;
+}
+.switch[aria-checked="true"] .switch-knob { transform: translateX(20px); }
+
+/* ---------- 圖片取色結果 ---------- */
+.extract {
+  margin-top: 16px; padding: 14px; border-radius: var(--r-sm);
+  background: var(--cream);
+  color: var(--ink);
+}
+.extract-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.extract-title { font-size: 15px; font-weight: 700; }
+.extract-note { margin: 2px 0 10px; font-size: 12px; color: var(--ink-2); }
+.btn-ghost { border-color: transparent; padding: 0; }
+.extract-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+.extract-item {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 2px; border-radius: var(--r-sm); cursor: pointer;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  color: var(--ink);
+}
+.extract-swatch { width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(52, 44, 37, 0.14); }
+.extract-hex { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
+.extract-share { font-size: 12px; color: var(--ink-2); }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 
 /* ---------- 推薦卡片 ---------- */
 .cards {
@@ -351,7 +415,39 @@ input[type="range"]::-moz-range-thumb {
 }
 .check-title { font-size: 16px; font-weight: 700; color: var(--ink); }
 .check-desc { font-size: 13px; color: var(--ink-2); }
-.check-value { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--mist-deep); }
+.check-value { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--mist-deep); white-space: nowrap; }
+
+/* 老師模式的模擬檢視 */
+#sim-block { margin-bottom: 12px; }
+#sim-hint { margin: 0; }
+
+/* 字級與版面建議、色票卡 */
+.panel {
+  margin-top: 20px; padding: 20px;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+.typo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.typo-head h3 { font-size: 18px; }
+.typo-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.typo-row + .typo-row { border-top: 1px solid var(--hair); }
+.typo-label { font-size: 15px; font-weight: 700; }
+.typo-min { font-size: 12px; color: var(--ink-3); }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.btn-round { width: var(--tap); padding: 0; }
+.btn:disabled { cursor: not-allowed; border-style: dashed; color: var(--ink-3); }
+.stepper-value { min-width: 64px; text-align: center; font-family: var(--font-mono); font-size: 16px; font-weight: 700; }
+.tips { margin: 8px 0 0; padding-left: 20px; font-size: 13px; color: var(--ink-2); }
+.tips li + li { margin-top: 2px; }
+
+.card-canvas-wrap { display: flex; justify-content: center; }
+.card-canvas {
+  display: block; width: 100%; max-width: 320px; height: auto;
+  border-radius: var(--r-sm);
+  box-shadow: 0 0 0 1px var(--hair), var(--shadow-card);
+}
 
 /* ---------- 五個角色與複製 ---------- */
 .roles-card {
@@ -460,6 +556,9 @@ input[type="range"]::-moz-range-thumb {
 
   /* 設計稿的電腦版預覽下方直接接五個角色；面積比例改顯示在五個角色標題列（假設） */
   .ratio-block, .checks { display: none; }
+  /* DESIGN 第 8 節：老師模式的預覽下方是檢查（對比度、投影、黑白列印、色弱） */
+  body[data-mode="teacher"] .checks { display: block; }
+  .panel { padding: 24px; }
 
   .roles-card { padding: 24px; }
   .role-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
@@ -488,5 +587,5 @@ input[type="range"]::-moz-range-thumb {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .toast { transition: none; }
+  .toast, .switch-knob { transition: none; }
 }

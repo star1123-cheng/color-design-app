@@ -37,6 +37,10 @@ const ICONS = {
   pencil: ['M4 20l4-1 11-11-3-3L5 16z', 'M14 7l3 3'],
   camera: ['M4 8h3l2-3h6l2 3h3v11H4z', 'M12 10.5a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4z'],
   share: ['M12 15V4', 'M8 8l4-4 4 4', 'M5 13v6h14v-6'],
+  download: ['M12 4v11', 'M8 11l4 4 4-4', 'M5 13v6h14v-6'],
+  close: ['M6 6l12 12', 'M18 6L6 18'],
+  minus: ['M6 12h12'],
+  plus: ['M12 6v12', 'M6 12h12'],
 };
 
 /** 建立線條 SVG 圖示（裝飾用，aria-hidden） */

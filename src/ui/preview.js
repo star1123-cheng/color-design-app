@@ -4,6 +4,8 @@
 import { h, icon, mount } from './dom.js';
 import { contrastRatio, bestTextOn, adjustForContrast, CONTRAST } from '../color/contrast.js';
 import { ratioBar } from './cards.js';
+import { simulateColors, checkGrayscale, CVD_TYPES, CVD_LABELS, GRAYSCALE_MIN_DIFF } from '../color/cvd.js';
+import { checkProjection } from '../color/palette.js';
 
 function onFill(fill, c) {
   for (const cand of [c.text.hex, c.background.hex]) {
@@ -67,21 +69,56 @@ function worksheet(c) {
 
 const RENDER = { slides: slide, webpage, worksheet };
 
-/** 依類型渲染預覽，並更新面積比例條 */
-export function renderPreview(stage, palette, type, ratioEl) {
-  mount(stage, (RENDER[type] ?? slide)(palette.colors));
-  if (ratioEl) mount(ratioEl, ratioBar(palette.colors, 'ratio-wide'));
+/**
+ * 依類型渲染預覽，並更新面積比例條。
+ * @param {string} [simulate] 模擬檢視（老師模式）：none、gray、protan、deutan、tritan
+ */
+export function renderPreview(stage, palette, type, ratioEl, simulate = 'none') {
+  const colors = simulateColors(palette.colors, simulate);
+  mount(stage, (RENDER[type] ?? slide)(colors));
+  if (ratioEl) mount(ratioEl, ratioBar(colors, 'ratio-wide'));
 }
 
-/** 檢查清單：文字對比度、點綴色對比度（SPEC 4.3） */
-export function renderChecks(list, palette) {
+const ratioText = (v) => `${v.toFixed(1)}:1`;
+
+/** 大眾模式：文字對比度、點綴色對比度（SPEC 4.3） */
+function publicRows(palette) {
   const { textOnBackground, accentOnBackground } = palette.checks.contrast;
-  const rows = [
-    { title: '文字對比度', desc: `字色對底色，一般文字需 ${CONTRAST.text}:1 以上`, value: textOnBackground, ok: textOnBackground >= CONTRAST.text },
-    { title: '點綴色對比度', desc: `按鈕邊框、圖表線條需 ${CONTRAST.graphic}:1 以上`, value: accentOnBackground, ok: accentOnBackground >= CONTRAST.graphic },
+  return [
+    { title: '文字對比度', desc: `字色對底色，一般文字需 ${CONTRAST.text}:1 以上`, value: ratioText(textOnBackground), ok: textOnBackground >= CONTRAST.text },
+    { title: '點綴色對比度', desc: `按鈕邊框、圖表線條需 ${CONTRAST.graphic}:1 以上`, value: ratioText(accentOnBackground), ok: accentOnBackground >= CONTRAST.graphic },
   ];
+}
+
+/** 老師模式：用簡單的話說明（SPEC 4.5、7） */
+function teacherRows(palette, { minText, projection }) {
+  const { contrast, cvd } = palette.checks;
+  const gray = checkGrayscale(palette.colors.primary.hex, palette.colors.secondary.hex); // 不用四捨五入後的值判斷
+  const rows = [
+    { title: '字看得清楚嗎', desc: `字和底色的對比要 ${minText}:1 以上`, value: ratioText(contrast.textOnBackground), ok: contrast.textOnBackground >= minText },
+    { title: '重點色看得清楚嗎', desc: `點綴色當按鈕框線、圖表線條，對比要 ${CONTRAST.graphic}:1 以上`, value: ratioText(contrast.accentOnBackground), ok: contrast.accentOnBackground >= CONTRAST.graphic },
+    { title: '印成黑白分得出來嗎', desc: `主色和輔色印成黑白後，深淺要差 ${GRAYSCALE_MIN_DIFF} 以上`, value: gray.diff.toFixed(2), ok: gray.ok },
+  ];
+  if (projection) {
+    const pj = checkProjection(palette);
+    rows.push({ title: '適合投影嗎', desc: pj.ok ? '底色夠亮、字夠清楚、大面積的顏色不刺眼' : pj.issues.join('、'), value: pj.ok ? '適合' : '要調整', ok: pj.ok });
+  }
+  for (const t of CVD_TYPES) {
+    rows.push({ title: `${CVD_LABELS[t]}的人分得出來嗎`, desc: `模擬${CVD_LABELS[t]}的人看主色和輔色`, value: cvd[t] ? '分得出' : '不易分辨', ok: cvd[t] === true });
+  }
+  return rows;
+}
+
+/**
+ * 檢查清單。
+ * @param {{ teacher?: boolean, minText?: number, projection?: boolean }} [opts]
+ */
+export function renderChecks(list, palette, { teacher = false, minText = CONTRAST.text, projection = false } = {}) {
+  const rows = teacher ? teacherRows(palette, { minText, projection }) : publicRows(palette);
   mount(list, rows.map((r) => h('li', { class: 'check' },
     h('span', { class: r.ok ? 'check-icon' : 'check-icon check-icon-warn' }, icon(r.ok ? 'check' : 'alert')),
-    h('div', { class: 'check-text' }, h('div', { class: 'check-title' }, r.title), h('div', { class: 'check-desc' }, r.desc)),
-    h('span', { class: 'check-value' }, `${r.value.toFixed(1)}:1`))));
+    h('div', { class: 'check-text' },
+      h('div', { class: 'check-title' }, r.title, h('span', { class: 'visually-hidden' }, r.ok ? '：通過' : '：未通過')),
+      h('div', { class: 'check-desc' }, r.desc)),
+    h('span', { class: 'check-value' }, r.value))));
 }

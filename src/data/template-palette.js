@@ -3,6 +3,7 @@
 import { hexToOklch } from '../color/oklch.js';
 import { contrastRatio, CONTRAST } from '../color/contrast.js';
 import { checkPalette } from '../color/rules.js';
+import { checkGrayscale, checkCvd } from '../color/cvd.js';
 import { SCHEMA_VERSION, ROLES, validatePalette } from './schema.js';
 import { typographyFor } from './presets.js';
 
@@ -33,8 +34,8 @@ export function toPalette(t) {
         textOnBackground: round(contrastRatio(t.colors.text, t.colors.background), 2),
         accentOnBackground: round(contrastRatio(t.colors.accent, t.colors.background), 2),
       },
-      grayscaleLDiff: round(Math.abs(colors.primary.oklch[0] - colors.secondary.oklch[0]), 3),
-      cvd: { protan: null, deutan: null, tritan: null },
+      grayscaleLDiff: round(checkGrayscale(t.colors.primary, t.colors.secondary).diff, 3),
+      cvd: checkCvd(t.colors.primary, t.colors.secondary),
       warnings: [
         ...(filled.length ? [`含引擎補色：${filled.join('、')}`] : []),
         ...t.issues,

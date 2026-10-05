@@ -1,10 +1,15 @@
-# 進度摘要（progress.md，2026-10-05，階段 2.5 完成時）
+# 進度摘要（progress.md，2026-10-05，階段 3 完成時）
 
 ## 已完成
 - 階段 0：範例資料化（62 組，規則集 44／驗證集 18）、風格確認，見 `rules-extracted.md`、`palettes.csv`。
 - 階段 1：色彩引擎與測試（SPEC v0.3），見 `engine-report.md`。
 - 階段 2：基礎 UI＋外觀依設計稿調整；本機預覽 `npm run dev`、介面檢查 `npm run audit`。
-- 階段 2.5：範本庫 52 組（收錄 49、待決定 3），見 `templates-review.md`。npm test 64 項。
+- 階段 2.5：範本庫收錄 49 組（另 3 組由使用者決定捨棄），見 `templates-review.md`。已提交 8eacf8e。
+- 階段 3：兩種模式功能（尚未提交，待使用者確認）。
+  - 老師模式：四個場景、投影模式開關、模擬檢視（原本／黑白列印／紅色弱／綠色弱／藍色弱）、字級微調（不低於 0.8 倍）與版面建議。
+  - 大眾模式：六個風格標籤（復古、夜間標示建置中）、圖片取色（本機 k-means）、色票卡 PNG（Web Share，不支援時下載）。
+  - 模式切換保留選色；狀態規則集中在 `src/state.js`（純函式，有測試）。
+  - 實作假設列在 `rules-changelog.md`「階段 3 實作假設」。
 
 ## 各模組對外函式
 - color/oklch：hexToOklch、oklchToLinearRgb、hexToRgb、rgbToHex、normalizeHex、isHex、roundOklch、hueDiff、normalizeHue、toOklchString、toRgbString、toHslString
@@ -12,10 +17,14 @@
 - color/contrast：relativeLuminance、contrastRatio、CONTRAST、bestTextOn、adjustForContrast
 - color/rules：RANGES、STYLE_PREFS、INSUFFICIENT_STYLES、checkRole、checkPalette、checkGradient、checkStyle
 - color/harmony：createRng、hashString、secondaryCandidates；color/gradient：makeGradient
-- color/palette：recommend、makeText、softenPrimary、makeId
-- data/schema：validatePalette、loadPalettes；data/presets：SCENES、STYLES、typographyFor、minTextContrast
+- color/palette：recommend、makeText、softenPrimary、makeId、checkProjection、PROJECTION、STYLE_HINTS
+- color/cvd：simulateCvd、toGrayHex、grayL、checkGrayscale、checkCvdPair、checkCvd、cvdWarning、simulateColors、CVD_*、SIM_*
+- color/extract：extractColors、fitSize
+- export/card：cardLayout、drawCard、renderCardCanvas、canvasToPng、cardFileName、shareMethod、downloadBlob、shareOrDownload
+- data/schema：validatePalette、loadPalettes；data/presets：SCENES、SCENE_PREVIEW、STYLES、typographyFor、typographyLimits、clampTypography、layoutTips、minTextContrast
 - data/template-palette：toPalette、checkTemplate、filledRoles；data/templates：TEMPLATES、TEMPLATE_COUNT
-- ui：initPicker、renderPicker、renderCards、ratioBar、renderPreview、renderChecks、renderRoles、copyText、toast、runDomAudit
+- state：createState、pickColor、switchMode、setScene、setProjection、setStyle、adjustTypography、currentTypography、recommendOptions、withTypography
+- ui：initPicker、renderPicker、renderCards、ratioBar、renderPreview、renderChecks、renderRoles、copyText、toast、runDomAudit、renderSceneBar、renderSimSwitch、renderTypography、renderStyleChips、renderShareCard、initImagePick
 - scripts：build-palettes、rule-report、build-templates、audit、serve（resolveRequest）、demo
 
 ## 重要決定與原因
@@ -24,12 +33,16 @@
 - 規則常數只在 rules.js；測試從 SPEC.md 原文解析預期值，不從程式複製。
 - 不載入外部字型、不連網路（SPEC 2、7）；深色模式延後。
 - 範本庫：沿用既有色碼、缺角色由引擎補色並標示來源、SPEC 2-7 加例外；docs/design-ref/ 不提交。
+- 點綴色未達 3:1 的 T-007、T-033、T-042 由使用者決定捨棄（編號保留空號）。
+- 階段 3：推薦排序維持階段 2 算法，避免範本庫引擎補色變色（`tests/templates.test.js` 確認 templates.js 未變）。
 
 ## 已知問題
-- 範本 T-007、T-033、T-042 點綴色未達 3:1，待使用者決定（收錄／調整／捨棄）。
 - 引擎補的點綴色依引擎輔色計算，部分範本觀感與原圖不同。
 - 療癒、森系、商務的 STYLE_PREFS.background 用詞未對齊 SPEC（使用者將另行決定）。
 - 手機實機、區網模式未實測；01–10 中文色名不在 audit 檢查範圍。
+- Web Share 只在手機（安全環境）實測才能確認；電腦瀏覽器與區網 http 會走下載。
+- 灰階與色弱檢查未納入排序（待使用者決定）。
 
 ## 下一步
-- 使用者決定 3 組待決定範本；之後等待階段 3 的 SPEC 範圍。
+- 階段 2.5 捨棄 3 組範本的修改與階段 3 的修改都尚未提交，待使用者確認 `git status`。
+- 階段 4（匯出、收藏與 PWA）於新對話開始：先讀本檔、SPEC.md、DESIGN.md。

@@ -20,3 +20,6 @@ docs/design-ref/
 *.log
 .DS_Store
 Thumbs.db
+
+# 本機開發工具設定（Claude Code 預覽用）
+.claude/
