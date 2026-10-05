@@ -5,7 +5,10 @@
   "description": "配色推薦 PWA：選一個顏色，自動推薦主色、輔色、底色、字色、點綴色",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "dev": "node scripts/serve.js",
+    "dev:lan": "node scripts/serve.js --lan",
+    "audit": "node scripts/audit.js"
   },
   "engines": {
     "node": ">=20"

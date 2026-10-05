@@ -14,6 +14,7 @@ dist/
 
 # 範例圖片（他人創作，只供內部參考，禁止提交）
 reference/
+docs/design-ref/
 
 # 系統與記錄檔
 *.log

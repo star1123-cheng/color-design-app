@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>配色推薦</title>
+  <link rel="stylesheet" href="src/ui/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>配色推薦</h1>
+        <p>簡報・網頁配色</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="seg seg-compact" role="group" aria-label="模式">
+          <button type="button" data-mode="teacher" aria-pressed="false" aria-label="老師模式">老師</button>
+          <button type="button" data-mode="public" aria-pressed="true" aria-label="大眾模式">大眾</button>
+        </div>
+        <button type="button" class="btn desktop-only" data-soon="收藏功能即將推出" aria-disabled="true" data-icon="bookmark">收藏</button>
+        <button type="button" class="btn btn-solid desktop-only" id="copy-all-top" data-icon="copy">複製全部 HEX</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="pick" id="pick" aria-labelledby="pick-title">
+      <div class="pagehead">
+        <span class="pageno">01 / 04</span>
+        <span class="rule" aria-hidden="true"></span>
+        <span class="pagelabel">選色</span>
+      </div>
+      <h2 class="hero" id="pick-title">選一個顏色，<br>其餘交給我。</h2>
+
+      <div class="picker-card">
+        <div class="picker-top">
+          <div class="focus-ring"><div class="focus-swatch" id="focus-swatch" data-user-color></div></div>
+          <div class="picker-info">
+            <div class="picker-label">目前主色</div>
+            <div class="focus-hex" id="focus-hex">#78A5CE</div>
+            <div class="focus-sub" id="focus-sub"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <label for="lightness">明度（越右越深）</label>
+            <span class="range-value" id="lightness-value" aria-hidden="true">L 0.71</span>
+          </div>
+          <input type="range" id="lightness" min="20" max="95" step="1" value="70">
+        </div>
+
+        <div class="picker-actions">
+          <button type="button" class="btn" id="hex-toggle" aria-expanded="false" aria-controls="hex-row" data-icon="pencil">輸入色碼</button>
+          <button type="button" class="btn" data-soon="從圖片取色即將推出" aria-disabled="true" data-icon="camera">從圖片取色</button>
+        </div>
+
+        <div class="field hex-field" id="hex-row" hidden>
+          <span class="label" id="color-label">挑選顏色或輸入 6 碼色碼</span>
+          <div class="field-row">
+            <input type="color" id="color-input" value="#78a5ce" aria-labelledby="color-label">
+            <input type="text" id="hex-input" value="#78A5CE" inputmode="text" autocomplete="off" spellcheck="false"
+                   maxlength="7" aria-labelledby="color-label" aria-describedby="hex-error">
+          </div>
+          <p class="hint" id="hex-error" hidden>請輸入 6 碼色碼，例如 #78A5CE</p>
+        </div>
+
+        <p class="hint" id="mode-hint" hidden>老師模式的使用場景、投影模式與黑白列印檢查，會在下一版加入。目前先以「上課簡報」的字級推薦。</p>
+      </div>
+    </section>
+
+    <section class="recs" id="recs" aria-labelledby="recs-title">
+      <div class="sechead">
+        <span class="pageno">02 / 04</span>
+        <h2 id="recs-title">為你配好的 5 組</h2>
+        <span class="swipe-hint" aria-hidden="true">左右滑動看更多</span>
+      </div>
+      <div class="seg seg-view" id="view-switch" role="group" aria-label="配色來源">
+        <button type="button" data-view="recs" aria-pressed="true">為你推薦</button>
+        <button type="button" data-view="templates" aria-pressed="false">範本庫</button>
+      </div>
+      <div class="chips" id="style-filter" role="group" aria-label="依風格篩選" hidden></div>
+      <p class="hint" id="tpl-hint" hidden>範本的色碼整理自參考範例；標示「含補色」的範本，缺少的角色由系統補上。</p>
+      <ul class="cards" id="cards" aria-label="配色清單"></ul>
+    </section>
+
+    <section class="preview" id="preview" aria-labelledby="preview-title">
+      <div class="sechead">
+        <span class="pageno">03 / 04</span>
+        <h2 id="preview-title">預覽與檢查</h2>
+        <div class="seg seg-full" role="group" aria-label="預覽類型">
+          <button type="button" data-preview="slides" aria-pressed="true">簡報</button>
+          <button type="button" data-preview="webpage" aria-pressed="false">網頁</button>
+          <button type="button" data-preview="worksheet" aria-pressed="false">學習單</button>
+        </div>
+      </div>
+      <div class="stage" id="stage"></div>
+
+      <div class="ratio-block">
+        <div class="ratio-head">
+          <h3>面積比例</h3>
+          <span class="mono-note">60 · 30 · 10</span>
+        </div>
+        <div id="ratio-wide"></div>
+      </div>
+
+      <ul class="checks" id="checks" aria-label="檢查結果"></ul>
+    </section>
+
+    <section class="roles" id="roles" aria-labelledby="roles-title">
+      <div class="roles-card">
+        <div class="sechead">
+          <span class="pageno">04 / 04</span>
+          <h2 id="roles-title">五個角色與色碼</h2>
+          <span class="mono-note desktop-only">60 · 30 · 10</span>
+        </div>
+        <ul class="role-list" id="role-list"></ul>
+        <button type="button" class="btn btn-primary" id="copy-all"></button>
+        <pre class="code" id="code" aria-label="色碼清單"></pre>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottomnav" aria-label="頁面導覽">
+    <a class="navlink" href="#pick" data-nav="pick"></a>
+    <a class="navlink" href="#preview" data-nav="preview"></a>
+    <a class="navlink" href="#roles" data-nav="roles"></a>
+    <a class="navlink" href="#" data-nav="saved" aria-disabled="true"></a>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

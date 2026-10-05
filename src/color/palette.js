@@ -15,6 +15,20 @@ const PRIMARY_L = [0.485, 0.825];
 const PRIMARY_C = [0.03, 0.155];
 const GRAYSCALE_MIN_DIFF = 0.12; // SPEC 4.5 第 2 點
 
+/**
+ * 產生 id（SPEC 3.1：crypto.randomUUID()）。
+ * 瀏覽器只在安全環境（localhost、https）提供 randomUUID；手機以區網 http 開啟時沒有，
+ * 此時改用 getRandomValues 組出同格式的 UUID v4。
+ */
+export function makeId(c = globalThis.crypto) {
+  if (typeof c?.randomUUID === 'function') return c.randomUUID();
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40; // 版本 4
+  b[8] = (b[8] & 0x3f) | 0x80; // RFC 4122 變體
+  const hex = [...b].map((v) => v.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 /** 主色柔化：超出範圍時夾回範圍內，保留原色相 */
 export function softenPrimary(lch) {
   const [L, C, H] = lch;
@@ -85,7 +99,7 @@ function buildOne(primary, candidate, ctx, rng) {
     score,
     palette: {
       schemaVersion: SCHEMA_VERSION,
-      id: globalThis.crypto.randomUUID(),
+      id: makeId(),
       name: candidate.type,
       mode: ctx.mode,
       context: { scene: ctx.mode === 'teacher' ? ctx.scene : null, style: ctx.mode === 'public' ? ctx.style : null, projection: ctx.projection },

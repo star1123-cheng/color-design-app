@@ -140,6 +140,13 @@ test('STYLE_PREFS 數值等於 SPEC 4.6（療癒、清新、森系、商務）',
   assert.equal(STYLE_PREFS.商務.avgCmax, Number(avg[1]));
 });
 
+test('STYLE_PREFS 清新的底色文字等於 SPEC 4.6「其他」欄', () => {
+  const other = row(s46, '清新')[3]; // SPEC 4.6：底色暖白或中性白
+  const m = /^底色(.+)$/.exec(other);
+  assert.ok(m, 'SPEC 4.6 清新「其他」欄格式無法解析');
+  assert.equal(STYLE_PREFS.清新.background, m[1]);
+});
+
 test('SPEC 4.6 樣本不足的風格（復古、夜間）不寫入引擎', () => {
   for (const style of ['復古', '夜間']) {
     assert.ok(row(s46, style)[1].includes('樣本不足'), `SPEC 4.6 ${style} 未標示樣本不足`);

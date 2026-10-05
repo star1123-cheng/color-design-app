@@ -27,7 +27,7 @@ export const RANGES = {
 // SPEC 4.6：復古、夜間樣本不足，不寫入引擎
 export const STYLE_PREFS = {
   療癒: { H: [[290, 360], [0, 60]], C: [0.04, 0.165], background: '暖底' },
-  清新: { H: [[180, 255]], C: [0.025, 0.08], background: '暖底' },
+  清新: { H: [[180, 255]], C: [0.025, 0.08], background: '暖白或中性白' },
   森系: { H: [[130, 180]], C: [0.025, 0.065], background: '暖底' },
   商務: { darkLmax: 0.52, avgCmax: 0.05, background: '暖底' },
 };
