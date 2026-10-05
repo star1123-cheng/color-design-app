@@ -2,6 +2,7 @@
 // 色票屬於「使用者資料」，以 inline style 設定；文字一律用 textContent（h()）。
 import { h, icon, mount } from './dom.js';
 import { contrastRatio, CONTRAST } from '../color/contrast.js';
+import { normalizeHex, isHex } from '../color/oklch.js';
 import { ROLE_LABELS } from '../export/formats.js';
 import { PARTS, ROLES, partsFor, isPartValue, resolvePart, customEntries, PREVIEW_LABELS } from '../data/parts.js';
 
@@ -50,11 +51,28 @@ export function renderCustom(panel, palette, type, { custom, part }, minText, { 
     on: { click: () => onSet(part, r) },
   }, swatch(c[r].hex), ROLE_LABELS[r]);
 
-  // 自訂顏色：原生取色器；change 在關閉取色器時才觸發，避免拖曳時一直重畫
-  const picker = h('input', { type: 'color', class: 'part-color', 'aria-label': `${PARTS[part].label}自訂顏色` });
-  picker.value = (set ? resolvePart(value, c) : c.primary.hex).toLowerCase();
-  picker.addEventListener('change', () => onSet(part, picker.value.toUpperCase()));
+  // 自訂顏色：與選色區「輸入色碼」相同的模組（圓形取色器＋6 碼色碼輸入框，2026-10-06 使用者決定）
+  // 取色器用 change（關閉取色器時才套用），避免拖曳時整個面板一直重畫而關掉取色器
   const customOn = set && !ROLES.includes(value);
+  const picker = h('input', { type: 'color', 'aria-labelledby': 'part-color-label' });
+  picker.value = (set ? resolvePart(value, c) : c.primary.hex).toLowerCase();
+  picker.addEventListener('change', () => onSet(part, normalizeHex(picker.value)));
+  const hexInput = h('input', {
+    type: 'text', inputmode: 'text', autocomplete: 'off', spellcheck: 'false', maxlength: '7', placeholder: '#RRGGBB',
+    'aria-labelledby': 'part-color-label', 'aria-describedby': 'part-hex-error', 'aria-invalid': 'false',
+  });
+  hexInput.value = customOn ? value : '';
+  const err = h('p', { class: 'hint', id: 'part-hex-error', hidden: true }, '請輸入 6 碼色碼，例如 #78A5CE');
+  // 按 Enter 或離開輸入框時套用；格式不對時只顯示提示，不重畫面板
+  hexInput.addEventListener('change', () => {
+    const raw = hexInput.value.trim();
+    if (!raw) return;
+    const v = raw.startsWith('#') ? raw : `#${raw}`;
+    const ok = /^#[0-9a-f]{6}$/i.test(v) && isHex(v);
+    hexInput.setAttribute('aria-invalid', String(!ok));
+    err.hidden = ok;
+    if (ok) onSet(part, normalizeHex(v));
+  });
 
   mount(panel,
     h('div', { class: 'typo-head' },
@@ -64,9 +82,11 @@ export function renderCustom(panel, palette, type, { custom, part }, minText, { 
     h('label', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '要調整的元件'), select),
     h('div', { class: 'chips chips-wrap part-chips', role: 'group', 'aria-label': `${PARTS[part].label}的顏色` },
       h('button', { type: 'button', class: 'chip', 'aria-pressed': String(!set), on: { click: () => onSet(part, null) } }, '預設'),
-      ROLES.map(roleBtn),
-      h('label', { class: customOn ? 'chip part-chip part-custom is-on' : 'chip part-chip part-custom' },
-        picker, customOn ? value : '自訂顏色')),
+      ROLES.map(roleBtn)),
+    h('div', { class: 'field part-hex' },
+      h('span', { class: 'label', id: 'part-color-label' }, customOn ? '自訂顏色（使用中）：挑選顏色或輸入 6 碼色碼' : '自訂顏色：挑選顏色或輸入 6 碼色碼'),
+      h('div', { class: 'field-row' }, picker, hexInput),
+      err),
     set ? h('p', { class: 'grad-note part-note' }, note(part, resolvePart(value, c), palette, custom, minText)) : null,
     entries.length ? h('div', { class: 'part-summary' },
       h('ul', { class: 'part-list' }, entries.map((e) => h('li', {},
