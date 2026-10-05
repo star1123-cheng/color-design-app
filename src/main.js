@@ -1,7 +1,6 @@
 // 程式入口：保存狀態、串接各元件。色彩計算一律呼叫 src/color/，狀態變更規則在 src/state.js（可測試）。
 import { recommend } from './color/palette.js';
 import { hexToOklch } from './color/oklch.js';
-import { CONTRAST } from './color/contrast.js';
 import { minTextContrast } from './data/presets.js';
 import { initPicker, renderPicker } from './ui/picker.js';
 import { renderCards } from './ui/cards.js';
@@ -38,7 +37,7 @@ const templateTags = (p) => {
   const { t } = TEMPLATE_LIST.find((x) => x.palette === p);
   return [{ text: t.id }, { text: t.style }, ...(filledRoles(t).length ? [{ text: '含補色', sand: true }] : [])];
 };
-const showingTemplates = () => state.mode === 'public' && state.view === 'templates';
+const showingTemplates = () => state.view === 'templates';
 
 /** 目前套用中的配色（推薦或範本）；老師模式含字級微調 */
 function activePalette() {
@@ -74,26 +73,19 @@ function renderStyleFilter() {
 }
 
 function render() {
-  const teacher = state.mode === 'teacher';
   const tpl = showingTemplates();
   const palette = activePalette();
-  document.body.dataset.mode = state.mode;
 
   const softened = !tpl && palette.checks.warnings.some((w) => w.includes('柔化'));
   renderPicker({ hex: state.hex, softened });
 
-  // 推薦區上方：老師是場景與投影，大眾是配色來源與風格
-  $('teacher-bar').hidden = !teacher;
-  $('public-bar').hidden = teacher;
-  if (teacher) {
-    renderSceneBar($('scene-chips'), $('projection-switch'), state, {
-      onScene: (scene) => set(S.setScene(state, scene), { recompute: true }),
-      onProjection: (on) => set(S.setProjection(state, on), { recompute: true }),
-    });
-  } else {
-    $('style-block').hidden = tpl;
-    if (!tpl) renderStyleChips($('style-chips'), $('style-hint'), state.style, (style) => set(S.setStyle(state, style), { recompute: true }));
-  }
+  // 推薦區上方：場景與投影、配色來源與風格
+  renderSceneBar($('scene-chips'), $('projection-switch'), state, {
+    onScene: (scene) => set(S.setScene(state, scene), { recompute: true }),
+    onProjection: (on) => set(S.setProjection(state, on), { recompute: true }),
+  });
+  $('style-block').hidden = tpl;
+  if (!tpl) renderStyleChips($('style-chips'), $('style-hint'), state.style, (style) => set(S.setStyle(state, style), { recompute: true }));
   $('style-filter').hidden = !tpl;
   $('tpl-hint').hidden = !tpl;
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === (tpl ? 'templates' : 'recs'))));
@@ -111,17 +103,12 @@ function render() {
     renderCards($('cards'), palettes, state.fav ? -1 : state.selected, (i) => set({ ...state, selected: i, fav: null }));
   }
 
-  // 預覽與檢查：老師模式有模擬檢視、字級與版面建議；大眾模式有色票卡
-  $('sim-block').hidden = !teacher;
-  if (teacher) renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
-  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'), teacher ? state.simulate : 'none');
-  renderChecks($('checks'), palette, teacher
-    ? { teacher: true, minText: minTextContrast(state.scene, state.projection), projection: state.projection }
-    : { minText: CONTRAST.text });
-  $('typo-panel').hidden = !teacher;
-  if (teacher) renderTypography($('typo-panel'), state, (key, delta) => set(S.adjustTypography(state, key, delta)));
-  $('share-panel').hidden = teacher;
-  if (!teacher) renderShareCard($('share-panel'), palette);
+  // 預覽與檢查：模擬檢視、檢查清單、字級與版面建議、色票卡
+  renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
+  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'), state.simulate);
+  renderChecks($('checks'), palette, { teacher: true, minText: minTextContrast(state.scene, state.projection), projection: state.projection });
+  renderTypography($('typo-panel'), state, (key, delta) => set(S.adjustTypography(state, key, delta)));
+  renderShareCard($('share-panel'), palette);
 
   renderRoles($('role-list'), palette, [$('copy-all-top')]);
   renderExport($('export-panel'), palette, state, {
@@ -137,7 +124,6 @@ function render() {
     onRemove: (id) => { const r = removeFavorite(id); favorites = r.palettes; toast(r.message); render(); },
     onRename: (id, name) => { const r = renameFavorite(id, name); favorites = r.palettes; toast(r.message); render(); },
   });
-  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
   document.querySelectorAll('[data-preview]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preview === state.previewType)));
 }
 
@@ -166,11 +152,6 @@ initImagePick({
     toast(`已用 ${hex} 當主色`);
   },
 });
-
-// 模式切換：保留目前選色（規則見 src/state.js 的 switchMode）
-document.querySelectorAll('[data-mode]').forEach((btn) => btn.addEventListener('click', () => {
-  set(S.switchMode(state, btn.dataset.mode), { recompute: true });
-}));
 
 document.querySelectorAll('[data-view]').forEach((btn) => btn.addEventListener('click', () => {
   if (btn.dataset.view === 'templates') {

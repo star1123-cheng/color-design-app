@@ -1,6 +1,6 @@
 {
-  "name": "配色推薦",
-  "short_name": "配色推薦",
+  "name": "色境｜從容，面不改色",
+  "short_name": "色境",
   "description": "選一個顏色，自動推薦主色、輔色、底色、字色、點綴色",
   "lang": "zh-Hant-TW",
   "start_url": "./",

@@ -116,7 +116,7 @@ test(`收藏：上限 ${MAX_FAVORITES} 組（假設）`, () => {
 const manifest = JSON.parse(readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
 
 test('manifest：名稱、相對路徑 start_url、standalone、192 與 512 圖示（含 maskable）', () => {
-  assert.equal(manifest.name, '配色推薦');
+  assert.equal(manifest.short_name, '色境');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.display, 'standalone');
   for (const size of ['192x192', '512x512']) {

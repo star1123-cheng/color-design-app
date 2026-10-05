@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { section, row } from './spec-reader.js';
 import {
-  createState, pickColor, switchMode, setScene, setProjection, setStyle, adjustTypography,
+  createState, pickColor, setScene, setProjection, setStyle, adjustTypography,
   currentTypography, recommendOptions, withTypography,
 } from '../src/state.js';
 import { SCENES, SCENE_KEYS, STYLES, typographyLimits, clampTypography, layoutTips, typographyFor } from '../src/data/presets.js';
@@ -17,43 +17,29 @@ import { checkGrayscale } from '../src/color/cvd.js';
 
 const lchMap = (p) => Object.fromEntries(Object.entries(p.colors).map(([k, v]) => [k, v.oklch]));
 
-// ---------- 模式切換不遺失選色 ----------
+// ---------- 功能整合（2026-10-05 起不分模式） ----------
 
-test('模式切換：選色（hex 與明度基準）不變，來回切換後仍相同', () => {
+test('整合：換場景、投影、風格都不會改變選色', () => {
   let s = pickColor(createState(), '#e36f4f');
   const { hex, base } = s;
-  s = switchMode(s, 'teacher');
+  s = setStyle(setProjection(setScene(s, 'poster'), true), '療癒');
   assert.equal(s.hex, hex);
   assert.deepEqual(s.base, base);
-  s = switchMode(s, 'public');
-  s = switchMode(s, 'teacher');
-  assert.equal(s.hex, '#E36F4F');
-  assert.deepEqual(s.base, base);
-});
-
-test('模式切換：兩種模式的推薦主色相同（同一個選色）', () => {
-  let s = pickColor(createState(), '#6B9274');
-  const pub = recommend(s.hex, recommendOptions(s))[0];
-  s = switchMode(s, 'teacher');
-  const tea = recommend(s.hex, recommendOptions(s))[0];
-  assert.equal(pub.mode, 'public');
-  assert.equal(tea.mode, 'teacher');
-  assert.equal(pub.colors.primary.hex, tea.colors.primary.hex);
-});
-
-test('模式切換：各自的設定保留（老師的場景與投影、大眾的風格）；範本庫只在大眾模式', () => {
-  let s = createState();
-  s = setStyle(s, '森系');
-  s = { ...s, view: 'templates' };
-  s = switchMode(s, 'teacher');
-  assert.equal(s.view, 'recs');
-  s = setProjection(setScene(s, 'poster'), true);
-  s = switchMode(s, 'public');
-  assert.equal(s.style, '森系');
-  s = switchMode(s, 'teacher');
   assert.equal(s.scene, 'poster');
   assert.equal(s.projection, true);
-  assert.equal(switchMode(s, 'xyz'), s, '不認得的模式不改變');
+  assert.equal(s.style, '療癒');
+});
+
+test('整合：推薦同時套用場景、投影與風格', () => {
+  const s = setStyle(setProjection(setScene(pickColor(createState(), '#E7688B'), 'slides'), true), '療癒');
+  for (const p of recommend(s.hex, recommendOptions(s))) {
+    assert.equal(p.context.scene, 'slides');
+    assert.equal(p.context.style, '療癒');
+    assert.equal(p.context.projection, true);
+    assert.ok(checkProjection(p).ok);
+    assert.ok(checkStyle('療癒', Object.values(p.colors).map((c) => c.oklch), p.colors.primary.oklch));
+    assert.deepEqual(validatePalette(p).errors, []);
+  }
 });
 
 test('明度滑桿：只改 L，不更換明度基準；新選色才更換', () => {
@@ -102,7 +88,7 @@ test('字級微調：不得低於下限、也不超過上限（假設 2 倍）�
 });
 
 test('字級微調按鈕：一直往下按會停在下限；換場景或投影模式回到預設', () => {
-  let s = setScene(switchMode(createState(), 'teacher'), 'worksheet');
+  let s = setScene(createState(), 'worksheet');
   for (let i = 0; i < 20; i++) s = adjustTypography(s, 'body', -1);
   assert.equal(currentTypography(s).body, 10); // 12 × 0.8 = 9.6 → 10
   s = adjustTypography(s, 'body', 1);
@@ -112,18 +98,15 @@ test('字級微調按鈕：一直往下按會停在下限；換場景或投影�
 });
 
 test('字級微調會寫進配色資料（SPEC 3.1 typography），仍通過 validatePalette', () => {
-  let s = setScene(switchMode(createState(), 'teacher'), 'slides');
+  let s = setScene(createState(), 'slides');
   s = adjustTypography(s, 'title', 4);
   const p = withTypography(recommend(s.hex, recommendOptions(s))[0], s);
   assert.equal(p.typography.title, 40);
   assert.deepEqual(validatePalette(p).errors, []);
-  const pub = switchMode(s, 'public');
-  const q = recommend(pub.hex, recommendOptions(pub))[0];
-  assert.equal(withTypography(q, pub), q, '大眾模式不套用老師的字級微調');
 });
 
 test('換場景：預覽改成對應版面；學習單預設開啟黑白列印檢查', () => {
-  const s = switchMode(createState(), 'teacher');
+  const s = createState();
   assert.equal(setScene(s, 'worksheet').previewType, 'worksheet');
   assert.equal(setScene(s, 'worksheet').simulate, 'gray');
   assert.equal(setScene(s, 'webpage').previewType, 'webpage');
@@ -249,9 +232,12 @@ test('選色不在風格色相範圍：保留使用者的色相，並提示', ()
   assert.ok(Math.abs(p.colors.primary.oklch[2] - 250) < 15, '色相仍是藍色');
 });
 
-test('老師模式不套用風格', () => {
-  const [p] = recommend('#3D7FC4', { mode: 'teacher', style: '商務' });
-  assert.equal(p.context.style, null);
-  assert.ok(!p.checks.warnings.some((w) => w.includes('風格')));
+test('風格與場景可以同時使用；沒選風格時不套用', () => {
+  const [p] = recommend('#3D7FC4', { mode: 'teacher', scene: 'worksheet', style: '商務' });
+  assert.equal(p.context.style, '商務');
+  assert.equal(p.context.scene, 'worksheet');
+  const [q] = recommend('#3D7FC4', { mode: 'teacher' });
+  assert.equal(q.context.style, null);
+  assert.ok(!q.checks.warnings.some((w) => w.includes('風格')));
   for (const s of INSUFFICIENT_STYLES) assert.ok(!STYLE_PREFS[s]);
 });

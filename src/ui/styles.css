@@ -104,12 +104,10 @@ button, input[type="color"], input[type="text"], input[type="range"], a.navlink 
   padding: 8px var(--gutter) 24px;
   display: grid; gap: 28px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "pick" "recs" "preview" "roles" "saved";
 }
-.pick { grid-area: pick; min-width: 0; }
-.recs { grid-area: recs; min-width: 0; }
-.preview { grid-area: preview; min-width: 0; }
-.roles { grid-area: roles; min-width: 0; }
+/* 左欄：01 選色、02 推薦；右欄：03 預覽、04 角色。手機時兩欄依序堆疊，順序仍是 1234 */
+.col { display: grid; gap: 28px; align-content: start; min-width: 0; }
+.pick, .recs, .preview, .roles { min-width: 0; }
 section { scroll-margin-top: 12px; }
 
 .pageno { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); letter-spacing: 0.08em; white-space: nowrap; }
@@ -476,7 +474,7 @@ a.btn { min-height: var(--tap); text-decoration: none; }
 #export-panel .chips-wrap + .code { margin-top: 12px; }
 
 /* ---------- 收藏 ---------- */
-.saved { grid-area: saved; min-width: 0; }
+.saved { grid-column: 1 / -1; min-width: 0; }
 .fav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .fav {
   display: grid; gap: 10px; padding: 16px; border-radius: var(--r-md);
@@ -531,14 +529,6 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
 }
 .toast.show { opacity: 1; }
 
-/* ---------- 中寬度（800–1023）：兩欄 ---------- */
-@media (min-width: 800px) and (max-width: 1023px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas: "pick preview" "recs recs" "roles roles" "saved saved";
-  }
-}
-
 /* ---------- 電腦版（≥ 1024）：依設計稿 ---------- */
 @media (min-width: 1024px) {
   body { padding-bottom: 40px; }
@@ -552,9 +542,16 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
 
   .layout {
     padding: 32px 40px 24px; gap: 24px;
-    grid-template-columns: 320px minmax(0, 1fr);
-    grid-template-areas: "pick preview" "pick roles" "recs recs" "saved saved";
+    grid-template-columns: 360px minmax(0, 1fr);
     align-items: start;
+  }
+  .col { gap: 24px; }
+  /* 左欄固定在畫面上、自己捲動：往下看預覽時，選色與推薦一直看得到，左下角不會空白 */
+  .col-left {
+    position: sticky; top: 16px;
+    max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain;
+    padding: 4px 8px 24px; margin: -4px -8px 0; /* 留空間給卡片陰影，避免被捲動區切掉 */
+    scrollbar-width: thin;
   }
 
   /* 選色：整個區塊成為一張卡片 */
@@ -576,9 +573,7 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
   .sechead .seg button { padding: 0 22px; }
 
   /* 設計稿的電腦版預覽下方直接接五個角色；面積比例改顯示在五個角色標題列（假設） */
-  .ratio-block, .checks { display: none; }
-  /* DESIGN 第 8 節：老師模式的預覽下方是檢查（對比度、投影、黑白列印、色弱） */
-  body[data-mode="teacher"] .checks { display: block; }
+  .ratio-block { display: none; }
   .panel { padding: 24px; }
 
   .roles-card { padding: 24px; }
@@ -598,8 +593,8 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
   .card .ratio { height: 64px; }
   .seg-view { display: inline-flex; width: auto; }
   .chips { flex-wrap: wrap; overflow: visible; padding: 0 0 12px; margin: 0; }
-  /* 範本約 50 組，電腦版改 2 欄格狀排列（假設） */
-  .cards.is-templates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 推薦在左欄（360 px），範本也改成單欄 */
+  .cards.is-templates { display: flex; }
   .cards.is-templates .card .ratio { height: 52px; }
 
   .bottomnav { display: none; }

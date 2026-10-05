@@ -1,7 +1,7 @@
 // Service Worker（SPEC 2-4、階段 4）：只快取本網站自己的靜態檔，不快取、不轉送任何外部請求。
 // 新增或刪除網站檔案時，請更新 PRECACHE 並把 CACHE 的版本號加 1，舊快取會在 activate 時刪除。
 // PRECACHE 清單必須涵蓋 src/ 的所有檔案（tests/pwa.test.js 會檢查）。
-const CACHE = 'color-design-app-v1';
+const CACHE = 'color-design-app-v2';
 
 const PRECACHE = [
   './',

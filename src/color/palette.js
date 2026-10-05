@@ -139,7 +139,7 @@ function buildOne(primary, candidate, ctx, rng) {
       id: makeId(),
       name: candidate.type,
       mode: ctx.mode,
-      context: { scene: ctx.mode === 'teacher' ? ctx.scene : null, style: ctx.mode === 'public' ? ctx.style : null, projection: ctx.projection },
+      context: { scene: ctx.mode === 'teacher' ? ctx.scene : null, style: ctx.style, projection: ctx.projection },
       colors: {
         primary: color(primary),
         secondary: color(secondary),
@@ -176,18 +176,18 @@ export function recommend(seedHex, opts = {}) {
   const soft = softenPrimary(hexToOklch(hex));
   if (soft.softened) baseWarnings.push('選色超出建議範圍，已產生保留原色相的柔化版當主色');
   let primaryLch = soft.oklch;
-  if (mode === 'public' && style && INSUFFICIENT_STYLES.includes(style)) {
+  if (style && INSUFFICIENT_STYLES.includes(style)) {
     baseWarnings.push(`「${style}」風格規則建置中，暫以一般規則推薦`);
-  } else if (mode === 'public' && style && !STYLE_PREFS[style]) {
+  } else if (style && !STYLE_PREFS[style]) {
     baseWarnings.push(`不認得的風格「${style}」，以一般規則推薦`);
-  } else if (mode === 'public' && style) {
+  } else if (style) {
     const st = applyStyle(style, primaryLch);
     primaryLch = st.oklch;
     baseWarnings.push(...st.warnings);
   }
 
   const primary = quantize(primaryLch);
-  const ctx = { mode, scene, style: mode === 'public' ? style : null, projection, minContrast: minTextContrast(scene, projection), baseWarnings };
+  const ctx = { mode, scene, style, projection, minContrast: minTextContrast(scene, projection), baseWarnings };
   const results = secondaryCandidates(primary.oklch, rng).map((c, i) => {
     const r = buildOne(primary, c, ctx, rng);
     r.order = i;
