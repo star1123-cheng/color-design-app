@@ -13,15 +13,23 @@ function parseRgb(str) {
   const m = /rgba?\(([^)]+)\)/.exec(str);
   if (!m) return null;
   const [r, g, b, a = 1] = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
-  return { hex: rgbToHex([r, g, b]), alpha: a };
+  return { hex: rgbToHex([r, g, b]), rgb: [r, g, b], alpha: a };
 }
 
+// 半透明底色（例如毛玻璃浮水印）要疊在下層顏色上計算，才是眼睛實際看到的底色
 function effectiveBackground(el) {
+  const layers = [];
+  let base = null;
   for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
     const bg = parseRgb(getComputedStyle(n).backgroundColor);
-    if (bg && bg.alpha > 0.95) return bg.hex;
+    if (!bg || bg.alpha === 0) continue;
+    if (bg.alpha > 0.95) { base = bg; break; }
+    layers.push(bg);
   }
-  return parseRgb(getComputedStyle(document.body).backgroundColor)?.hex ?? '#FFFFFF';
+  base ??= parseRgb(getComputedStyle(document.body).backgroundColor) ?? { rgb: [255, 255, 255] };
+  let rgb = base.rgb;
+  for (const l of layers.reverse()) rgb = rgb.map((v, i) => v * (1 - l.alpha) + l.rgb[i] * l.alpha);
+  return rgbToHex(rgb);
 }
 
 const visible = (el) => {

@@ -4,7 +4,8 @@ import { hexToOklch } from './color/oklch.js';
 import { minTextContrast } from './data/presets.js';
 import { initPicker, renderPicker } from './ui/picker.js';
 import { renderCards } from './ui/cards.js';
-import { renderPreview, renderChecks } from './ui/preview.js';
+import { renderPreview } from './ui/preview.js';
+import { renderGradients } from './ui/gradient.js';
 import { renderRoles } from './ui/roles.js';
 import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
 import { renderStyleChips, renderShareCard } from './ui/public.js';
@@ -103,11 +104,20 @@ function render() {
     renderCards($('cards'), palettes, state.fav ? -1 : state.selected, (i) => set({ ...state, selected: i, fav: null }));
   }
 
-  // 預覽與檢查：模擬檢視、檢查清單、字級與版面建議、色票卡
+  // 預覽：模擬檢視、漸層、字級與版面建議（預覽的字會跟著字級變大變小）、色票卡
+  // 2026-10-06 使用者決定：拿掉預覽下方的檢查清單
+  const minText = minTextContrast(state.scene, state.projection);
   renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
-  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'), state.simulate);
-  renderChecks($('checks'), palette, { teacher: true, minText: minTextContrast(state.scene, state.projection), projection: state.projection });
-  renderTypography($('typo-panel'), state, (key, delta) => set(S.adjustTypography(state, key, delta)));
+  renderPreview($('stage'), palette, state.previewType, $('ratio-wide'),
+    { simulate: state.simulate, gradient: state.gradient, scale: S.typographyScale(state) });
+  renderGradients($('gradient-panel'), palette, state.gradient, minText, (gradient) => {
+    set({ ...state, gradient });
+    if (gradient) $('stage').scrollIntoView({ block: 'center' });
+  });
+  renderTypography($('typo-panel'), state, {
+    onAdjust: (key, delta) => set(S.adjustTypography(state, key, delta)),
+    onReset: () => set(S.resetTypography(state)),
+  });
   renderShareCard($('share-panel'), palette);
 
   renderRoles($('role-list'), palette, [$('copy-all-top')]);

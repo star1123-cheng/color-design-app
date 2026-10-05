@@ -32,8 +32,8 @@ export function renderSimSwitch(chips, hint, simulate, onSim) {
   hint.textContent = SIM_HINTS[simulate] ?? '';
 }
 
-/** 字級微調（不低於下限）與版面建議 */
-export function renderTypography(panel, state, onAdjust) {
+/** 字級微調（不低於下限）與版面建議；微調後預覽的字會跟著變大變小 */
+export function renderTypography(panel, state, { onAdjust, onReset }) {
   const t = currentTypography(state);
   const lim = typographyLimits(state.scene, state.projection);
   const row = (key, label) => h('div', { class: 'typo-row' },
@@ -55,7 +55,9 @@ export function renderTypography(panel, state, onAdjust) {
     h('div', { class: 'typo-head' },
       h('h3', {}, '字級與版面建議'),
       h('span', { class: 'mono-note' }, `${SCENES[state.scene].label}${state.projection ? '・投影' : ''}`)),
+    h('p', { class: 'hint typo-hint' }, '按 ＋、－ 調整字級，上面的預覽會跟著變大變小。'),
     row('title', '標題'),
     row('body', '內文'),
+    state.typo ? h('button', { type: 'button', class: 'btn typo-reset', on: { click: onReset } }, '回到建議字級') : null,
     h('ul', { class: 'tips' }, layoutTips(state.scene, state.projection).map((tip) => h('li', {}, tip))));
 }

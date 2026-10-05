@@ -1,11 +1,12 @@
-// 三種迷你預覽（簡報、班級網頁、學習單）與檢查清單。顏色全部來自推薦結果（使用者資料）。
+// 三種迷你預覽（簡報、班級網頁、學習單）。顏色全部來自推薦結果（使用者資料）。
 // 色塊上的字：優先用配色的字色或底色，兩者都未達 4.5:1 時，依 SPEC 4.3 改用黑或白中對比較高者。
 // 標題：主色調深到對底色 4.5:1（只調 L，保持 H 與 C），做不到時改用字色。
-import { h, icon, mount } from './dom.js';
+import { h, mount } from './dom.js';
 import { contrastRatio, bestTextOn, adjustForContrast, CONTRAST } from '../color/contrast.js';
 import { ratioBar } from './cards.js';
-import { simulateColors, checkGrayscale, CVD_TYPES, CVD_LABELS, GRAYSCALE_MIN_DIFF } from '../color/cvd.js';
-import { checkProjection } from '../color/palette.js';
+import { simulateColors } from '../color/cvd.js';
+import { quantize } from '../color/gamut.js';
+import { gradientSuggestions } from '../color/gradient.js';
 
 function onFill(fill, c) {
   for (const cand of [c.text.hex, c.background.hex]) {
@@ -19,15 +20,15 @@ function titleColor(c) {
   return adj.ok ? adj.hex : c.text.hex;
 }
 
-const deco = (c) => h('div', { class: 'deco', 'aria-hidden': 'true' },
-  h('span', { class: 'deco-big', style: { background: c.primary.hex } }),
+const deco = (c, g) => h('div', { class: 'deco', 'aria-hidden': 'true' },
+  h('span', { class: 'deco-big', style: { background: g ? g.css : c.primary.hex } }),
   h('span', { class: 'deco-mid', style: { background: c.secondary.hex } }),
   h('span', { class: 'deco-dot', style: { background: c.accent.hex } }));
 
-function slide(c) {
+function slide(c, g) {
   const points = ['蒸發：水變成水蒸氣', '凝結：水蒸氣變成小水滴', '降水：小水滴聚集後落下'];
   return h('div', { class: 'mini slide', 'data-user-color': true, role: 'img', 'aria-label': '迷你簡報預覽', style: { background: c.background.hex, color: c.text.hex } },
-    deco(c),
+    deco(c, g),
     h('div', { class: 'slide-body' },
       h('div', { class: 'slide-kicker' }, '自然科學'),
       h('div', { class: 'slide-title', style: { color: titleColor(c) } }, '水的旅行'),
@@ -35,24 +36,57 @@ function slide(c) {
     h('div', { class: 'slide-no' }, '03'));
 }
 
-function webpage(c) {
-  return h('div', { class: 'mini web', 'data-user-color': true, role: 'img', 'aria-label': '迷你班級網頁預覽', style: { background: c.background.hex, color: c.text.hex } },
-    h('div', { class: 'web-head', style: { background: c.primary.hex, color: onFill(c.primary.hex, c) } },
-      h('span', {}, '五年一班'),
-      h('span', { class: 'web-nav' }, h('span', {}, '公告'), h('span', {}, '作業'), h('span', {}, '相簿'))),
-    h('div', { class: 'web-body' },
-      h('div', { class: 'web-hero', style: { background: c.secondary.hex, color: onFill(c.secondary.hex, c) } },
-        h('div', { class: 'web-title' }, '本週公告'),
-        h('div', {}, '星期五戶外教學，請記得帶水壺與帽子。'),
-        h('span', { class: 'web-btn', style: { background: c.accent.hex, color: onFill(c.accent.hex, c) } }, '查看詳情')),
-      h('div', { class: 'web-row' },
-        h('div', { class: 'web-tile', style: { borderColor: c.secondary.hex } }, '作業繳交'),
-        h('div', { class: 'web-tile', style: { borderColor: c.secondary.hex } }, '班級相簿'))));
+/** 淡色卡片底：沿用角色的色相，明度貼近底色（底色偏深時往亮一點） */
+function tint(role, c) {
+  const [bgL] = c.background.oklch;
+  const [, C, H] = role.oklch;
+  return quantize([bgL > 0.6 ? Math.max(0.9, bgL - 0.04) : bgL + 0.1, Math.min(C, 0.045), H]).hex;
 }
 
-function worksheet(c) {
+/** 班級網頁：參考作品集網站的版面（導覽列、雙欄主視覺、淡色卡片），讓配色看起來更有質感 */
+function webpage(c, g) {
+  const title = titleColor(c);
+  const heroGrad = g && g.text.hex; // 漸層上放得下字，才把整塊主視覺改成漸層
+  const card = (role, kicker, name) => {
+    const bg = tint(role, c);
+    return h('div', { class: 'web-card', style: { background: bg, color: onFill(bg, c) } },
+      h('span', { class: 'web-card-dot', style: { background: role.hex } }),
+      h('div', { class: 'web-card-kicker' }, kicker),
+      h('div', { class: 'web-card-title' }, name));
+  };
+  return h('div', { class: 'mini web', 'data-user-color': true, role: 'img', 'aria-label': '迷你班級網頁預覽', style: { background: c.background.hex, color: c.text.hex } },
+    h('div', { class: 'web-nav' },
+      h('span', { class: 'web-brand' },
+        h('span', { class: 'web-logo', style: { background: c.primary.hex, color: onFill(c.primary.hex, c) } }, '5'),
+        '五年一班'),
+      h('span', { class: 'web-links' }, h('span', {}, '公告'), h('span', {}, '作業'), h('span', {}, '相簿')),
+      h('span', { class: 'web-cta', style: { background: c.primary.hex, color: onFill(c.primary.hex, c) } }, '聯絡老師')),
+    h('div', { class: heroGrad ? 'web-hero is-grad' : 'web-hero', style: heroGrad ? { background: g.css, color: g.text.hex } : {} },
+      h('div', { class: 'web-copy' },
+        h('span', { class: 'web-tag', style: { borderColor: c.accent.hex } }, '本週公告'),
+        h('div', { class: 'web-title', style: { color: heroGrad ? g.text.hex : title } }, '星期五', h('br'), '戶外教學'),
+        h('p', { class: 'web-lead' }, '請記得帶水壺與帽子，早上 8 點在操場集合。'),
+        h('div', { class: 'web-actions' },
+          h('span', { class: 'web-btn', style: { background: c.accent.hex, color: onFill(c.accent.hex, c) } }, '查看詳情'),
+          h('span', { class: 'web-ghost', style: { borderColor: heroGrad ? g.text.hex : c.primary.hex } }, '行事曆'))),
+      h('div', { class: 'web-art', 'aria-hidden': 'true' },
+        h('span', { class: 'web-blob', style: { background: g && !heroGrad ? g.css : c.secondary.hex } }),
+        h('span', { class: 'web-ring', style: { borderColor: c.primary.hex } }),
+        h('span', { class: 'web-dot', style: { background: c.accent.hex } }),
+        h('div', { class: 'web-float', style: { background: c.background.hex, color: c.text.hex } },
+          h('div', { class: 'web-float-title' }, '作業繳交'),
+          h('div', { class: 'web-float-bar' }, h('span', { style: { background: c.primary.hex } })),
+          h('div', { class: 'web-float-note' }, '已交 24 / 28')))),
+    h('div', { class: 'web-cards' },
+      card(c.primary, '作業', '數學習作 P.32'),
+      card(c.secondary, '相簿', '校外教學'),
+      card(c.accent, '榮譽榜', '閱讀小達人')));
+}
+
+function worksheet(c, g) {
   const qs = ['冰塊放在室溫下，會變成什麼狀態？', '水煮沸時冒出的白煙是什麼？', '寫出一個生活中「凝結」的例子。'];
   return h('div', { class: 'mini sheet', 'data-user-color': true, role: 'img', 'aria-label': '迷你學習單預覽', style: { background: c.background.hex, color: c.text.hex } },
+    g ? h('div', { class: 'sheet-band', 'aria-hidden': 'true', style: { background: g.css } }) : null,
     h('div', { class: 'slide-kicker' }, '自然科學 學習單'),
     h('div', { class: 'sheet-title', style: { color: titleColor(c) } }, '水的旅行'),
     h('div', { class: 'sheet-meta', style: { borderBottomColor: c.primary.hex } },
@@ -71,54 +105,18 @@ const RENDER = { slides: slide, webpage, worksheet };
 
 /**
  * 依類型渲染預覽，並更新面積比例條。
- * @param {string} [simulate] 模擬檢視（老師模式）：none、gray、protan、deutan、tritan
+ * @param {{ simulate?: string, gradient?: string|null, scale?: { title: number, body: number } }} [opts]
+ *   simulate：none、gray、protan、deutan、tritan；gradient：套用的漸層 key；scale：字級倍率
  */
-export function renderPreview(stage, palette, type, ratioEl, simulate = 'none') {
+export function renderPreview(stage, palette, type, ratioEl, { simulate = 'none', gradient = null, scale = null } = {}) {
   const colors = simulateColors(palette.colors, simulate);
-  mount(stage, (RENDER[type] ?? slide)(colors));
+  // 漸層用模擬後的顏色重算，黑白與色弱模擬時也看得到漸層的樣子
+  const g = gradient ? gradientSuggestions(colors).find((x) => x.key === gradient) ?? null : null;
+  const node = (RENDER[type] ?? slide)(colors, g);
+  if (scale) {
+    node.style.setProperty('--ts', String(scale.title));
+    node.style.setProperty('--bs', String(scale.body));
+  }
+  mount(stage, node);
   if (ratioEl) mount(ratioEl, ratioBar(colors, 'ratio-wide'));
-}
-
-const ratioText = (v) => `${v.toFixed(1)}:1`;
-
-/** 大眾模式：文字對比度、點綴色對比度（SPEC 4.3） */
-function publicRows(palette) {
-  const { textOnBackground, accentOnBackground } = palette.checks.contrast;
-  return [
-    { title: '文字對比度', desc: `字色對底色，一般文字需 ${CONTRAST.text}:1 以上`, value: ratioText(textOnBackground), ok: textOnBackground >= CONTRAST.text },
-    { title: '點綴色對比度', desc: `按鈕邊框、圖表線條需 ${CONTRAST.graphic}:1 以上`, value: ratioText(accentOnBackground), ok: accentOnBackground >= CONTRAST.graphic },
-  ];
-}
-
-/** 老師模式：用簡單的話說明（SPEC 4.5、7） */
-function teacherRows(palette, { minText, projection }) {
-  const { contrast, cvd } = palette.checks;
-  const gray = checkGrayscale(palette.colors.primary.hex, palette.colors.secondary.hex); // 不用四捨五入後的值判斷
-  const rows = [
-    { title: '字看得清楚嗎', desc: `字和底色的對比要 ${minText}:1 以上`, value: ratioText(contrast.textOnBackground), ok: contrast.textOnBackground >= minText },
-    { title: '重點色看得清楚嗎', desc: `點綴色當按鈕框線、圖表線條，對比要 ${CONTRAST.graphic}:1 以上`, value: ratioText(contrast.accentOnBackground), ok: contrast.accentOnBackground >= CONTRAST.graphic },
-    { title: '印成黑白分得出來嗎', desc: `主色和輔色印成黑白後，深淺要差 ${GRAYSCALE_MIN_DIFF} 以上`, value: gray.diff.toFixed(2), ok: gray.ok },
-  ];
-  if (projection) {
-    const pj = checkProjection(palette);
-    rows.push({ title: '適合投影嗎', desc: pj.ok ? '底色夠亮、字夠清楚、大面積的顏色不刺眼' : pj.issues.join('、'), value: pj.ok ? '適合' : '要調整', ok: pj.ok });
-  }
-  for (const t of CVD_TYPES) {
-    rows.push({ title: `${CVD_LABELS[t]}的人分得出來嗎`, desc: `模擬${CVD_LABELS[t]}的人看主色和輔色`, value: cvd[t] ? '分得出' : '不易分辨', ok: cvd[t] === true });
-  }
-  return rows;
-}
-
-/**
- * 檢查清單。
- * @param {{ teacher?: boolean, minText?: number, projection?: boolean }} [opts]
- */
-export function renderChecks(list, palette, { teacher = false, minText = CONTRAST.text, projection = false } = {}) {
-  const rows = teacher ? teacherRows(palette, { minText, projection }) : publicRows(palette);
-  mount(list, rows.map((r) => h('li', { class: 'check' },
-    h('span', { class: r.ok ? 'check-icon' : 'check-icon check-icon-warn' }, icon(r.ok ? 'check' : 'alert')),
-    h('div', { class: 'check-text' },
-      h('div', { class: 'check-title' }, r.title, h('span', { class: 'visually-hidden' }, r.ok ? '：通過' : '：未通過')),
-      h('div', { class: 'check-desc' }, r.desc)),
-    h('span', { class: 'check-value' }, r.value))));
 }

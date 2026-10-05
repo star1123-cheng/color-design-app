@@ -2,7 +2,7 @@
 // 每個函式都回傳新的狀態物件，不修改傳入的狀態。
 // 2026-10-05 使用者決定：不再分老師／大眾模式，場景、投影、風格、模擬檢視等功能全部整合在同一個畫面。
 import { hexToOklch, normalizeHex } from './color/oklch.js';
-import { SCENES, SCENE_PREVIEW, STYLES, clampTypography } from './data/presets.js';
+import { SCENES, SCENE_PREVIEW, STYLES, clampTypography, typographyLimits } from './data/presets.js';
 
 export const DEFAULT_HEX = '#78A5CE'; // SPEC 第 9 節示範色
 
@@ -16,6 +16,7 @@ export function createState(overrides = {}) {
     projection: false,        // 投影模式
     typo: null,               // 字級微調（null 表示用場景預設值）
     style: null,              // 風格（null 表示不限）
+    gradient: null,           // 套用到預覽的漸層（null 表示不用漸層）
     selected: 0,
     ...overrides,
     hex,                                          // 目前選色（大寫 6 碼）
@@ -60,6 +61,16 @@ export function adjustTypography(state, key, delta) {
   const next = clampTypography(state.scene, state.projection, { ...now, [key]: now[key] + delta });
   return { ...state, typo: { title: next.title, body: next.body } };
 }
+
+/** 字級微調後相對於預設值的倍率，讓預覽的字跟著變大變小 */
+export function typographyScale(state) {
+  const t = currentTypography(state);
+  const lim = typographyLimits(state.scene, state.projection);
+  return { title: t.title / lim.title.default, body: t.body / lim.body.default };
+}
+
+/** 字級回到場景預設值 */
+export const resetTypography = (state) => ({ ...state, typo: null });
 
 /** 推薦引擎的參數：場景、投影與風格一起使用（資料格式的 mode 固定為 teacher，因為含場景） */
 export const recommendOptions = (state) =>
