@@ -1,6 +1,16 @@
 // 收藏清單（階段 4）：套用、改名、刪除。資料讀寫在 src/data/favorites.js。
 import { h, icon, mount } from './dom.js';
 import { ratioBar } from './cards.js';
+import { pickGradient, GRADIENT_TARGETS } from '../color/gradient.js';
+
+/** 收藏的漸層：色條＋名稱與用途（色碼由五色重算） */
+function gradientRow(p) {
+  const g = p.gradient ? pickGradient(p.colors, p.gradient) : null;
+  if (!g) return null;
+  return h('span', { class: 'fav-grad' },
+    h('span', { class: 'fav-grad-bar', 'data-user-color': true, 'aria-hidden': 'true', style: { background: g.css } }),
+    `漸層：${g.name}・${GRADIENT_TARGETS[g.target].label}`);
+}
 
 /**
  * @param {HTMLElement} list ul 容器
@@ -17,6 +27,7 @@ export function renderFavorites(list, empty, favorites, { onApply, onRemove, onR
     return h('li', { class: 'fav' },
       ratioBar(p.colors),
       name,
+      gradientRow(p),
       h('span', { class: 'card-hexes' }, ['primary', 'secondary', 'background', 'text', 'accent'].map((r) => p.colors[r].hex).join('  ·  ')),
       h('div', { class: 'fav-actions' },
         h('button', { type: 'button', class: 'btn btn-solid', on: { click: () => onApply(p) } }, icon('eye'), '套用'),

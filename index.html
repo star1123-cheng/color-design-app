@@ -11,6 +11,39 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="src/ui/styles.css">
+  <!-- 預先載入：一開始就同時下載所有程式檔，避免一層一層等（tests/stage4.test.js 會檢查清單完整） -->
+  <link rel="modulepreload" href="src/color/contrast.js">
+  <link rel="modulepreload" href="src/color/cvd.js">
+  <link rel="modulepreload" href="src/color/extract.js">
+  <link rel="modulepreload" href="src/color/gamut.js">
+  <link rel="modulepreload" href="src/color/gradient.js">
+  <link rel="modulepreload" href="src/color/harmony.js">
+  <link rel="modulepreload" href="src/color/oklch.js">
+  <link rel="modulepreload" href="src/color/palette.js">
+  <link rel="modulepreload" href="src/color/rules.js">
+  <link rel="modulepreload" href="src/data/favorites.js">
+  <link rel="modulepreload" href="src/data/parts.js">
+  <link rel="modulepreload" href="src/data/presets.js">
+  <link rel="modulepreload" href="src/data/schema.js">
+  <link rel="modulepreload" href="src/data/template-palette.js">
+  <link rel="modulepreload" href="src/data/templates.js">
+  <link rel="modulepreload" href="src/export/ai-prompt.js">
+  <link rel="modulepreload" href="src/export/card.js">
+  <link rel="modulepreload" href="src/export/formats.js">
+  <link rel="modulepreload" href="src/state.js">
+  <link rel="modulepreload" href="src/ui/cards.js">
+  <link rel="modulepreload" href="src/ui/copy.js">
+  <link rel="modulepreload" href="src/ui/custom.js">
+  <link rel="modulepreload" href="src/ui/dom.js">
+  <link rel="modulepreload" href="src/ui/export.js">
+  <link rel="modulepreload" href="src/ui/favorites.js">
+  <link rel="modulepreload" href="src/ui/gradient.js">
+  <link rel="modulepreload" href="src/ui/image-pick.js">
+  <link rel="modulepreload" href="src/ui/picker.js">
+  <link rel="modulepreload" href="src/ui/preview.js">
+  <link rel="modulepreload" href="src/ui/public.js">
+  <link rel="modulepreload" href="src/ui/roles.js">
+  <link rel="modulepreload" href="src/ui/teacher.js">
 </head>
 <body>
   <header class="topbar">
@@ -139,6 +172,7 @@
           <div id="ratio-wide"></div>
         </div>
 
+        <div class="panel" id="custom-panel"></div>
         <div class="panel" id="gradient-panel"></div>
         <div class="panel" id="typo-panel"></div>
         <div class="panel" id="share-panel"></div>

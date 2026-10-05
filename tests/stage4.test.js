@@ -151,6 +151,22 @@ test('Service Worker：快取清單涵蓋所有網頁檔，且每個檔案都存
   for (const f of precache.filter((x) => x !== './')) assert.ok(existsSync(path.join(ROOT, f)), `${f} 不存在`);
 });
 
+test('index.html 的 modulepreload 清單涵蓋 main.js 靜態引用的所有檔案（載入速度）', () => {
+  const seen = new Set();
+  const visit = (f) => {
+    if (seen.has(f)) return;
+    seen.add(f);
+    const src = readFileSync(path.join(ROOT, f), 'utf8');
+    for (const m of src.matchAll(/^\s*(?:import|export)\s[^'"]*?from\s+'([^']+)'|^import\s+'([^']+)'/gm)) {
+      visit(path.posix.normalize(path.posix.join(path.posix.dirname(f), m[1] ?? m[2])));
+    }
+  };
+  visit('src/main.js');
+  const html = readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const preload = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map((m) => m[1]);
+  assert.deepEqual([...preload].sort(), [...seen].filter((f) => f !== 'src/main.js').sort());
+});
+
 test('Service Worker：只處理同網域 GET，不快取外部請求；網址都是相對路徑', () => {
   assert.match(sw, /req\.method !== 'GET' \|\| new URL\(req\.url\)\.origin !== self\.location\.origin\) return/);
   assert.doesNotMatch(sw, /https?:\/\//);

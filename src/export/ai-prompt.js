@@ -4,6 +4,7 @@
 import { ROLES } from '../data/schema.js';
 import { minTextContrast } from '../data/presets.js';
 import { GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+import { customEntries } from '../data/parts.js';
 
 const q = (s) => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
@@ -22,8 +23,14 @@ const gradientYaml = (g) => (g ? [
   ...(g.text.hex ? [`  text_color: ${q(g.text.hex.toUpperCase())}`] : ['  text_needs_plate: true']),
 ] : []);
 
-/** YAML 設計規格；g：選定的漸層（可省略） */
-export function toYaml(p, g = null) {
+/** 元件配色區塊（2026-10-06 使用者新增）；沒有自訂時不輸出 */
+const customYaml = (p, custom) => {
+  const list = customEntries(custom, p.colors);
+  return list.length ? ['components:', ...list.map((e) => `  ${e.key}: ${q(e.hex.toUpperCase())}`)] : [];
+};
+
+/** YAML 設計規格；g：選定的漸層、custom：元件配色（都可省略） */
+export function toYaml(p, g = null, custom = null) {
   const t = p.typography;
   const lines = [
     'palette:',
@@ -36,12 +43,14 @@ export function toYaml(p, g = null) {
     ...(t.maxPointsPerSlide ? [`  max_points_per_slide: ${t.maxPointsPerSlide}`] : []),
     `  text_on_background_min_contrast: ${textMinContrast(p)}`,
     ...gradientYaml(g),
+    ...customYaml(p, custom),
   ];
   return `${lines.join('\n')}\n`;
 }
 
-/** 完整提示詞：口語說明（Markdown）＋ YAML 設計規格；g：選定的漸層（可省略） */
-export function toFullPrompt(p, g = null) {
+/** 完整提示詞：口語說明（Markdown）＋ YAML 設計規格；g：選定的漸層、custom：元件配色（都可省略） */
+export function toFullPrompt(p, g = null, custom = null) {
+  const parts = customEntries(custom, p.colors);
   const max = p.typography.maxPointsPerSlide;
   return [
     '請為「（請填入主題）」製作一份簡報。',
@@ -53,7 +62,7 @@ export function toFullPrompt(p, g = null) {
     '請嚴格遵守下列 YAML：',
     '',
     '```yaml',
-    toYaml(p, g).trimEnd(),
+    toYaml(p, g, custom).trimEnd(),
     '```',
     '',
     '## 補充規則',
@@ -64,6 +73,7 @@ export function toFullPrompt(p, g = null) {
       `- 漸層只用在「${GRADIENT_TARGETS[g.target].label}」，方向${GRADIENT_DIRS[g.dir].desc}，色票照 gradient.stops，其他地方不要用漸層。`,
       g.text.hex ? `- 漸層上的字用 ${g.text.hex.toUpperCase()}。` : '- 漸層上的字不夠清楚，放字前先墊一塊 background 色的底。',
     ] : []),
+    ...(parts.length ? [`- 指定元件的顏色照 components：${parts.map((e) => `${e.key}＝${e.label}`).join('、')}。`] : []),
     '',
   ].join('\n');
 }

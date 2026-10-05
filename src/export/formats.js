@@ -4,6 +4,7 @@
 import { toOklchString, toRgbString } from '../color/oklch.js';
 import { pickGradient, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
 import { minTextContrast } from '../data/presets.js';
+import { customEntries, partVar } from '../data/parts.js';
 import { oklchToHex } from '../color/gamut.js';
 import { adjustForContrast, CONTRAST } from '../color/contrast.js';
 import { ROLES } from '../data/schema.js';
@@ -25,28 +26,44 @@ export function selectedGradient(p, sel) {
 export const gradientNote = (g) => `${g.name}，用在${GRADIENT_TARGETS[g.target].label}，${GRADIENT_DIRS[g.dir].desc}`
   + `，${g.text.hex ? `上面的字用 ${g.text.hex}` : '上面放字要先加一塊底色'}`;
 
+/** 元件配色（2026-10-06 使用者新增）：custom 為 元件 → 角色名稱或 HEX；沒有自訂時不輸出 */
+const roleNote = (v) => (ROLES.includes(v) ? `（${ROLE_LABELS[v]}）` : '');
+const customSection = (p, custom, fmt) => {
+  const list = customEntries(custom, p.colors);
+  return list.length
+    ? `\n\n元件配色（自訂）\n${list.map((e) => `${e.label}（${e.types.join('、')}）：${fmt(e.hex)}${roleNote(e.value)}`).join('\n')}`
+    : '';
+};
+
 const listWithGradient = (lines, g, fmt) => (g
   ? `${lines}\n\n漸層（${gradientNote(g)}）\n${g.stops.map(fmt).join(' → ')}`
   : lines);
-const cssWithGradient = (vars, g) => `:root {\n${vars.join('\n')}${g
-  ? `\n  /* 漸層：${gradientNote(g)} */\n  --gradient-${g.key}: ${g.css};`
-  : ''}\n}`;
+const cssWithGradient = (vars, g, p, custom) => {
+  const parts = customEntries(custom, p.colors);
+  return `:root {\n${vars.join('\n')}${g
+    ? `\n  /* 漸層：${gradientNote(g)} */\n  --gradient-${g.key}: ${g.css};`
+    : ''}${parts.length
+    ? `\n  /* 元件配色（自訂） */\n${parts.map((e) => `  ${partVar(e.key)}: ${e.hex}; /* ${e.label} */`).join('\n')}`
+    : ''}\n}`;
+};
 
-/** HEX 清單（每行「角色 色碼」） */
-export const hexList = (p, g = null) =>
-  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${p.colors[r].hex}`).join('\n'), g, (s) => s.hex);
+/** HEX 清單（每行「角色 色碼」）；g：選定的漸層；custom：元件配色 */
+export const hexList = (p, g = null, custom = null) =>
+  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${p.colors[r].hex}`).join('\n'), g, (s) => s.hex)
+  + customSection(p, custom, (hex) => hex);
 
 /** RGB 清單 */
-export const rgbList = (p, g = null) =>
-  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${toRgbString(p.colors[r].hex)}`).join('\n'), g, (s) => toRgbString(s.hex));
+export const rgbList = (p, g = null, custom = null) =>
+  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${toRgbString(p.colors[r].hex)}`).join('\n'), g, (s) => toRgbString(s.hex))
+  + customSection(p, custom, toRgbString);
 
 /** CSS 變數（HEX） */
-export const cssVariables = (p, g = null) =>
-  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${p.colors[r].hex};`), g);
+export const cssVariables = (p, g = null, custom = null) =>
+  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${p.colors[r].hex};`), g, p, custom);
 
-/** CSS 變數（oklch()，較新瀏覽器；舊瀏覽器請用 HEX 版）。漸層沿用 HEX 寫法，相容性較好 */
-export const cssOklch = (p, g = null) =>
-  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${toOklchString(p.colors[r].oklch)};`), g);
+/** CSS 變數（oklch()，較新瀏覽器；舊瀏覽器請用 HEX 版）。漸層與元件配色沿用 HEX 寫法，相容性較好 */
+export const cssOklch = (p, g = null, custom = null) =>
+  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${toOklchString(p.colors[r].oklch)};`), g, p, custom);
 
 /** 主色或輔色調深到在底色上 ≥ 4.5:1（連結、標題可用）；做不到時改用字色 */
 function readable(c, role) {
@@ -79,9 +96,9 @@ export function slidesTheme(p) {
 }
 
 /** Google 簡報：主題色沒有漸層欄位，漸層請在「背景」或圖案「填滿顏色」→「漸層」→「自訂」設定 */
-export const slidesThemeText = (p, g = null) => {
+export const slidesThemeText = (p, g = null, custom = null) => {
   const theme = slidesTheme(p).map((x) => `${x.field}：${x.hex}（${x.from}）`).join('\n');
-  return g
+  return (g
     ? `${theme}\n\n漸層（${gradientNote(g)}）\n${g.stops.map((s) => s.hex).join(' → ')}\n設定位置：背景或圖案的「填滿顏色」→「漸層」→「自訂」`
-    : theme;
+    : theme) + customSection(p, custom, (hex) => hex);
 };

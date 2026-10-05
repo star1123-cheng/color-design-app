@@ -103,6 +103,9 @@ function analogous(primary, secondary) {
   return [[L, c, H], [Math.min(0.86, L + 0.06), c, (((H + sign * 35) % 360) + 360) % 360]];
 }
 
+/** 5 種漸層建議的 key（順序與 gradientSuggestions 相同；收藏資料驗證也用這份） */
+export const GRADIENT_KEYS = ['soft', 'analog', 'main', 'accent', 'deep'];
+
 /**
  * 漸層搭配建議（5 種）。
  * @param {Record<string, {hex: string, oklch: number[]}>} colors 配色的五個角色

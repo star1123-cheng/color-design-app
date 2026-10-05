@@ -22,20 +22,25 @@ const seg = (label, options, current, onPick) => h('div', { class: 'chips chips-
 /**
  * @param {HTMLElement} panel
  * @param {object} palette SPEC 3.1 配色（含字級微調）
- * @param {{ format: string, aiFormat: string, gradient?: { key: string|null, target: string, dir: string } }} st
- *   gradient：選定的漸層，會一起放進匯出內容
+ * @param {{ format: string, aiFormat: string, gradient?: { key: string|null, target: string, dir: string }, custom?: Record<string, string> }} st
+ *   gradient：選定的漸層；custom：元件配色。兩者都會一起放進匯出內容
  * @param {{ onFormat: (f: string) => void, onAiFormat: (f: string) => void }} handlers
  */
 export function renderExport(panel, palette, st, { onFormat, onAiFormat }) {
   const keys = Object.keys(FORMATS);
   const format = keys.includes(st.format) ? st.format : 'hex';
   const g = selectedGradient(palette, st.gradient);
-  const text = FORMATS[format].make(palette, g);
+  const custom = st.custom ?? null;
+  const text = FORMATS[format].make(palette, g, custom);
   const ai = AI[st.aiFormat] ? st.aiFormat : 'yaml';
-  const aiText = AI[ai].make(palette, g);
+  const aiText = AI[ai].make(palette, g, custom);
+  const nParts = Object.keys(custom ?? {}).length;
   mount(panel,
     h('div', { class: 'ratio-head' }, h('h3', {}, '匯出'), h('span', { class: 'mono-note' }, FORMATS[format].label)),
-    h('p', { class: 'hint' }, g ? `已附上選用的漸層「${g.name}」。` : '在「漸層搭配建議」選用漸層後，匯出內容會一起附上。'),
+    h('p', { class: 'hint' }, [
+      g ? `已附上選用的漸層「${g.name}」。` : '在「漸層搭配建議」選用漸層後，匯出內容會一起附上。',
+      nParts ? `已附上 ${nParts} 個元件配色。` : '',
+    ].join('')),
     seg('匯出格式', keys.map((k) => [k, FORMATS[k].label]), format, onFormat),
     h('pre', { class: 'code', 'aria-label': `${FORMATS[format].label}內容` }, text),
     h('button', { type: 'button', class: 'btn btn-primary', on: { click: () => copyText(text, FORMATS[format].copied) } },

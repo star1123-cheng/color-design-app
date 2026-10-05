@@ -6,6 +6,8 @@ import { initPicker, renderPicker } from './ui/picker.js';
 import { renderCards } from './ui/cards.js';
 import { renderPreview } from './ui/preview.js';
 import { renderGradients } from './ui/gradient.js';
+import { renderCustom } from './ui/custom.js';
+import { PARTS, partsFor } from './data/parts.js';
 import { renderRoles } from './ui/roles.js';
 import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
 import { renderStyleChips, renderShareCard } from './ui/public.js';
@@ -109,8 +111,14 @@ function render() {
   const minText = minTextContrast(state.scene, state.projection);
   renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
   const grad = S.gradientSelection(state);
+  const part = partsFor(state.previewType).includes(state.customPart) ? state.customPart : 'title';
   renderPreview($('stage'), palette, state.previewType, $('ratio-wide'),
-    { simulate: state.simulate, gradient: grad, minText, scale: S.typographyScale(state) });
+    { simulate: state.simulate, gradient: grad, minText, scale: S.typographyScale(state), custom: state.custom, picked: part });
+  renderCustom($('custom-panel'), palette, state.previewType, { custom: state.custom, part }, minText, {
+    onPart: pickPart,
+    onSet: (p, v) => set(S.setPartColor(state, p, v)),
+    onReset: () => { set(S.resetCustom(state)); toast('元件配色已全部回到預設'); },
+  });
   renderGradients($('gradient-panel'), palette, grad, minText, {
     onApply: (gradient) => {
       set({ ...state, gradient });
@@ -126,13 +134,13 @@ function render() {
   renderShareCard($('share-panel'), palette);
 
   renderRoles($('role-list'), palette, [$('copy-all-top')]);
-  renderExport($('export-panel'), palette, { ...state, gradient: grad }, {
+  renderExport($('export-panel'), palette, { ...state, gradient: grad, custom: state.custom }, {
     onFormat: (format) => set({ ...state, format }),
     onAiFormat: (aiFormat) => set({ ...state, aiFormat }),
   });
   renderFavorites($('fav-list'), $('saved-empty'), favorites, {
     onApply: (p) => {
-      set({ ...S.pickColor(state, p.colors.primary.hex), fav: p }, { recompute: true, keepFav: true });
+      set(S.applyFavorite({ ...S.pickColor(state, p.colors.primary.hex), fav: p }, p), { recompute: true, keepFav: true });
       toast(`已套用收藏「${p.name}」`);
       $('preview').scrollIntoView();
     },
@@ -188,9 +196,24 @@ document.querySelectorAll('[data-soon]').forEach((el) => el.addEventListener('cl
   toast(el.dataset.soon);
 }));
 
-// 加入收藏（目前套用中的配色，含字級微調）
+/** 選一個元件來調整；元件不在目前的預覽時，切到有它的預覽 */
+function pickPart(p) {
+  if (!PARTS[p]) return;
+  const previewType = PARTS[p].types.includes(state.previewType) ? state.previewType : PARTS[p].types[0];
+  set({ ...state, customPart: p, previewType });
+}
+
+// 點預覽上的元件：選它來調整顏色（最內層、有標 data-part 的元素）
+$('stage').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-part]');
+  if (!el) return;
+  pickPart(el.dataset.part);
+  $('custom-panel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
+
+// 加入收藏（目前套用中的配色，含字級微調、選定的漸層與元件配色）
 $('fav-add').addEventListener('click', () => {
-  const r = addFavorite(activePalette());
+  const r = addFavorite(S.paletteForFavorite(activePalette(), state));
   favorites = r.palettes;
   toast(r.message);
   render();

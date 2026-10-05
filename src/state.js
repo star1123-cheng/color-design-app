@@ -3,6 +3,7 @@
 // 2026-10-05 使用者決定：不再分老師／大眾模式，場景、投影、風格、模擬檢視等功能全部整合在同一個畫面。
 import { hexToOklch, normalizeHex } from './color/oklch.js';
 import { SCENES, SCENE_PREVIEW, STYLES, clampTypography, typographyLimits } from './data/presets.js';
+import { PARTS, isPartValue } from './data/parts.js';
 
 export const DEFAULT_HEX = '#78A5CE'; // SPEC 第 9 節示範色
 
@@ -19,6 +20,8 @@ export function createState(overrides = {}) {
     gradient: null,           // 選定的漸層（null 表示不用漸層），會套用到預覽並放進匯出
     gradientTarget: 'hero',   // 漸層用在哪個元件：background、hero、button、deco
     gradientDir: 'diag',      // 漸層方向：diag、h、v、radial
+    custom: {},               // 元件配色：元件 → 角色名稱或 HEX（見 src/data/parts.js）
+    customPart: 'title',      // 正在調整的元件
     selected: 0,
     ...overrides,
     hex,                                          // 目前選色（大寫 6 碼）
@@ -80,6 +83,40 @@ export const recommendOptions = (state) =>
 
 /** 把字級微調寫進配色資料（SPEC 3.1 的 typography） */
 export const withTypography = (palette, state) => ({ ...palette, typography: currentTypography(state) });
+
+/** 設定某個元件的顏色：value 為角色名稱或 HEX（大小寫皆可）；null 表示回到預設 */
+export function setPartColor(state, part, value) {
+  if (!Object.hasOwn(PARTS, part)) return state;
+  const { [part]: _old, ...rest } = state.custom ?? {};
+  if (value === null) return { ...state, custom: rest, customPart: part };
+  const v = typeof value === 'string' && value.startsWith('#') ? value.toUpperCase() : value;
+  if (!isPartValue(v)) return state;
+  return { ...state, custom: { ...rest, [part]: v }, customPart: part };
+}
+
+/** 元件配色全部回到預設 */
+export const resetCustom = (state) => ({ ...state, custom: {} });
+
+/** 收藏用：把目前選定的漸層與元件配色寫進配色（沒有設定時不寫這兩個欄位） */
+export function paletteForFavorite(palette, state) {
+  const { gradient: _g, custom: _c, ...rest } = palette;
+  const sel = gradientSelection(state);
+  const custom = state.custom ?? {};
+  return {
+    ...rest,
+    ...(sel.key ? { gradient: sel } : {}),
+    ...(Object.keys(custom).length ? { custom: { ...custom } } : {}),
+  };
+}
+
+/** 套用收藏：漸層與元件配色跟著收藏（收藏沒有時取消；漸層的用途與方向維持目前的選擇） */
+export const applyFavorite = (state, fav) => ({
+  ...state,
+  gradient: fav.gradient?.key ?? null,
+  gradientTarget: fav.gradient?.target ?? state.gradientTarget,
+  gradientDir: fav.gradient?.dir ?? state.gradientDir,
+  custom: { ...(fav.custom ?? {}) },
+});
 
 /** 目前選定的漸層設定（給預覽與匯出共用） */
 export const gradientSelection = (state) =>

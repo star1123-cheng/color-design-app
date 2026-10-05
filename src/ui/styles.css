@@ -453,6 +453,23 @@ input[type="range"]::-moz-range-thumb {
 .grad-hexes { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); margin: 2px 0; overflow-wrap: anywhere; }
 .grad-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
 .grad-opt { display: grid; gap: 6px; margin-top: 12px; }
+/* 元件配色（2026-10-06 使用者新增） */
+.part-select { min-height: var(--tap); padding: 0 14px; border-radius: 999px; border: 1px solid var(--hair); background: var(--cream); color: var(--ink); font: inherit; font-size: 15px; }
+.part-chips { margin-top: 10px; }
+.part-chip { display: inline-flex; align-items: center; gap: 8px; min-height: var(--tap); }
+.part-dot { width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1px var(--hair); flex: 0 0 auto; }
+.part-custom { padding-left: 4px; font-family: var(--font-mono); }
+.part-custom.is-on { border-color: var(--mist-deep); background: var(--mist-deep); color: var(--cream); font-weight: 700; }
+.part-custom input[type="color"] { width: 44px; height: 44px; flex: 0 0 44px; border: 0; background: transparent; }
+.part-note { margin: 8px 0 0; }
+.part-summary { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hair); }
+.part-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.part-summary > .btn { justify-self: start; }
+.stage [data-part] { cursor: pointer; }
+.stage .deco [data-part] { pointer-events: auto; }
+.stage .is-picked { outline: 2px dashed var(--mist-deep); outline-offset: 2px; }
+.fav-grad { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.fav-grad-bar { width: 48px; height: 14px; border-radius: 999px; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--hair); }
 .grad-opt-label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
 /* 預覽中的漸層元件（2026-10-06 使用者新增） */
 .grad-banner { padding: 2.4cqw 3cqw; border-radius: var(--r-sm); margin-bottom: 2.4cqw; }

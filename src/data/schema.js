@@ -1,5 +1,7 @@
 // 內部資料格式（SPEC 3.1，schemaVersion 1）與驗證
 import { SCENE_KEYS } from './presets.js';
+import { GRADIENT_KEYS, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+import { isCustomMap } from './parts.js';
 
 export const SCHEMA_VERSION = 1;
 export const ROLES = ['primary', 'secondary', 'background', 'text', 'accent'];
@@ -62,6 +64,17 @@ export function validatePalette(p) {
     if (!isNum(t.title) || !isNum(t.body)) errors.push('typography.title、body 必須是數字');
     if (t.maxPointsPerSlide !== null && !isNum(t.maxPointsPerSlide)) errors.push('typography.maxPointsPerSlide 必須是數字或 null');
   }
+
+  // 選定的漸層（可省略，2026-10-06 使用者新增）：只存 key、用途、方向，色碼由五色重算
+  if (p.gradient !== undefined) {
+    const g = p.gradient;
+    if (!isObj(g) || !GRADIENT_KEYS.includes(g.key) || !Object.hasOwn(GRADIENT_TARGETS, g.target ?? '') || !Object.hasOwn(GRADIENT_DIRS, g.dir ?? '')) {
+      errors.push('gradient 必須含正確的 key、target、dir');
+    }
+  }
+
+  // 元件配色（可省略，2026-10-06 使用者新增）：元件 → 角色名稱或大寫 HEX
+  if (p.custom !== undefined && !isCustomMap(p.custom)) errors.push('custom 的元件或顏色不正確');
 
   return { valid: errors.length === 0, errors };
 }

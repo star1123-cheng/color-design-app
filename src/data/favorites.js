@@ -43,6 +43,23 @@ function write(s, list) {
 
 /** 同一組五色視為同一筆 */
 const signature = (p) => ['primary', 'secondary', 'background', 'text', 'accent'].map((r) => p.colors[r].hex).join('');
+/** 漸層與元件配色的設定（比較是否相同用） */
+const extrasSig = (p) => JSON.stringify([
+  p.gradient ? [p.gradient.key, p.gradient.target, p.gradient.dir] : null,
+  Object.entries(p.custom ?? {}).sort(([a], [b]) => (a < b ? -1 : 1)),
+]);
+
+/** 把 src 的漸層與元件配色設定套到 p（src 沒有的欄位就移除） */
+function withExtras(p, src) {
+  const { gradient: _g, custom: _c, ...rest } = p;
+  const g = src.gradient;
+  const custom = src.custom && Object.keys(src.custom).length ? { ...src.custom } : null;
+  return {
+    ...rest,
+    ...(g ? { gradient: { key: g.key, target: g.target, dir: g.dir } } : {}),
+    ...(custom ? { custom } : {}),
+  };
+}
 
 /**
  * 加入收藏（放在最前面）。
@@ -52,9 +69,19 @@ export function addFavorite(palette, storage) {
   const s = getStorage(storage);
   if (!s) return { ok: false, palettes: [], message: '這個瀏覽器無法使用收藏（可能是無痕模式）' };
   const { palettes } = loadFavorites(s);
-  if (palettes.some((p) => signature(p) === signature(palette))) return { ok: false, palettes, message: '這組配色已經在收藏裡了' };
+  const same = palettes.find((p) => signature(p) === signature(palette));
+  if (same) {
+    // 同一組五色、漸層或元件配色不同：更新那筆收藏的設定，不另存一筆
+    if (extrasSig(same) === extrasSig(palette)) return { ok: false, palettes, message: '這組配色已經在收藏裡了' };
+    const updated = withExtras(same, palette);
+    if (!validatePalette(updated).valid) return { ok: false, palettes, message: '這組配色格式不符，無法收藏' };
+    const next = palettes.map((p) => (p === same ? updated : p));
+    const err = write(s, next);
+    if (err) return { ok: false, palettes, message: err };
+    return { ok: true, palettes: next, message: '已更新這組收藏的漸層與元件配色' };
+  }
   if (palettes.length >= MAX_FAVORITES) return { ok: false, palettes, message: `收藏最多 ${MAX_FAVORITES} 組，請先刪除一些` };
-  const item = { ...structuredClone(palette), id: makeId() };
+  const item = withExtras({ ...structuredClone(palette), id: makeId() }, palette);
   if (!validatePalette(item).valid) return { ok: false, palettes, message: '這組配色格式不符，無法收藏' };
   const next = [item, ...palettes];
   const err = write(s, next);

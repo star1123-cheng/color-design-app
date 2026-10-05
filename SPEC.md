@@ -72,6 +72,8 @@
 - `mode` 為 `teacher` 或 `public`；`scene` 為 `slides`、`worksheet`、`webpage`、`poster` 其中之一；大眾模式使用 `style`。
 - 提供 `validatePalette()` 驗證函式（檢查 schemaVersion、HEX 格式、五個角色齊全、對比度欄位為數字）。
 - 讀取收藏時若 `schemaVersion` 不認得，跳過該筆並提示，不得讓程式當機。
+- 選填欄位 `gradient`（2026-10-06 使用者新增）：收藏時一起保存選定的漸層，格式為 `{ "key": "analog", "target": "hero", "dir": "diag" }`。`key` 為 `soft`、`analog`、`main`、`accent`、`deep`；`target` 為 `background`、`hero`、`button`、`deco`；`dir` 為 `diag`、`h`、`v`、`radial`。只存設定，色碼套用時由五色重算；沒選漸層時不寫這個欄位，舊資料照常讀取。
+- 選填欄位 `custom`（2026-10-06 使用者新增）：元件配色，格式為 `{ "title": "#C0392B", "card1": "accent" }`。鍵為 `src/data/parts.js` 的元件名稱；值為五個角色之一（跟著配色變）或大寫 6 碼 HEX（自訂顏色）。沒有自訂時不寫這個欄位。
 
 ## 4. 配色規則（由範例歸納，皆為（假設）初值）
 

@@ -1,4 +1,4 @@
-// 2026-10-06 使用者新增：點綴色取相近色、漸層可選用途與方向、選定的漸層放進匯出與「複製給 AI」
+// 2026-10-06 使用者新增：點綴色取相近色、漸層可選用途與方向、選定的漸層放進匯出、「複製給 AI」與收藏
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { recommend } from '../src/color/palette.js';
@@ -6,7 +6,9 @@ import { hueDiff } from '../src/color/oklch.js';
 import { pickGradient, gradientCss, GRADIENT_TARGETS, GRADIENT_DIRS } from '../src/color/gradient.js';
 import { hexList, rgbList, cssVariables, cssOklch, slidesThemeText, selectedGradient } from '../src/export/formats.js';
 import { toYaml, toFullPrompt } from '../src/export/ai-prompt.js';
-import { createState, gradientSelection } from '../src/state.js';
+import { createState, gradientSelection, paletteForFavorite, applyFavorite } from '../src/state.js';
+import { addFavorite, loadFavorites, STORAGE_KEY } from '../src/data/favorites.js';
+import { validatePalette } from '../src/data/schema.js';
 
 const HEXES = ['#78A5CE', '#E07A5F', '#2F6B4F', '#F2C94C', '#7A5C99', '#74AECF'];
 
@@ -77,4 +79,62 @@ test('匯出：沒選漸層時內容與舊版相同；選了之後每種格式�
   const full = toFullPrompt(p, g);
   assert.ok(full.includes('漸層只用在「整頁背景」'));
   assert.ok(full.includes('gradient:'));
+});
+
+// ---------- 收藏一起保存漸層 ----------
+
+const memStorage = () => {
+  const data = {};
+  return { data, getItem: (k) => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); } };
+};
+
+test('收藏：選定的漸層一起保存，讀回後可還原用途與方向', () => {
+  const [p] = recommend('#78A5CE');
+  const st = { ...createState(), gradient: 'analog', gradientTarget: 'button', gradientDir: 'radial' };
+  const s = memStorage();
+  const r = addFavorite(paletteForFavorite(p, st), s);
+  assert.equal(r.ok, true);
+  const [saved] = loadFavorites(s).palettes;
+  assert.deepEqual(saved.gradient, { key: 'analog', target: 'button', dir: 'radial' });
+  assert.ok(!JSON.stringify(saved.gradient).includes('#'), '只存設定，不另存色碼');
+  const back = applyFavorite(createState(), saved);
+  assert.deepEqual(gradientSelection(back), { key: 'analog', target: 'button', dir: 'radial' });
+});
+
+test('收藏：沒選漸層時不寫 gradient 欄位；套用沒有漸層的收藏會取消漸層', () => {
+  const [p] = recommend('#E07A5F');
+  const s = memStorage();
+  addFavorite(paletteForFavorite(p, createState()), s);
+  assert.ok(!('gradient' in loadFavorites(s).palettes[0]));
+  const back = applyFavorite({ ...createState(), gradient: 'main' }, loadFavorites(s).palettes[0]);
+  assert.equal(back.gradient, null);
+});
+
+test('收藏：同一組五色換了漸層，更新原本那筆，不重複新增', () => {
+  const [p] = recommend('#6B9274');
+  const s = memStorage();
+  const base = { ...createState(), gradient: 'soft' };
+  assert.equal(addFavorite(paletteForFavorite(p, base), s).ok, true);
+  assert.match(addFavorite(paletteForFavorite(p, base), s).message, /已經在收藏/);
+  const r = addFavorite(paletteForFavorite(p, { ...base, gradient: 'deep', gradientDir: 'h' }), s);
+  assert.equal(r.ok, true);
+  assert.match(r.message, /更新/);
+  const list = loadFavorites(s).palettes;
+  assert.equal(list.length, 1);
+  assert.deepEqual(list[0].gradient, { key: 'deep', target: 'hero', dir: 'h' });
+  assert.match(addFavorite(paletteForFavorite(p, createState()), s).message, /更新/);
+  assert.ok(!('gradient' in loadFavorites(s).palettes[0]));
+});
+
+test('驗證：gradient 欄位可省略；格式錯誤時不通過', () => {
+  const [p] = recommend('#78A5CE');
+  assert.equal(validatePalette(p).valid, true);
+  assert.equal(validatePalette({ ...p, gradient: { key: 'main', target: 'hero', dir: 'diag' } }).valid, true);
+  for (const bad of [null, 'main', { key: 'x', target: 'hero', dir: 'diag' }, { key: 'main', target: 'toString', dir: 'diag' }, { key: 'main', target: 'hero' }]) {
+    assert.equal(validatePalette({ ...p, gradient: bad }).valid, false, JSON.stringify(bad));
+  }
+  // 舊收藏（沒有 gradient）照常讀得到
+  const s = memStorage();
+  s.setItem(STORAGE_KEY, JSON.stringify([p]));
+  assert.equal(loadFavorites(s).palettes.length, 1);
 });
