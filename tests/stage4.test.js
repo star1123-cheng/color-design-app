@@ -167,6 +167,11 @@ test('index.html 的 modulepreload 清單涵蓋 main.js 靜態引用的所有檔
   assert.deepEqual([...preload].sort(), [...seen].filter((f) => f !== 'src/main.js').sort());
 });
 
+test('Service Worker：抓檔與安裝都略過瀏覽器的舊快取（避免 GitHub Pages max-age 讓 F5 看不到更新）', () => {
+  assert.match(sw, /new Request\(req, \{ cache: 'no-cache' \}\)/);
+  assert.match(sw, /c\.addAll\(PRECACHE\.map\(\(u\) => new Request\(u, \{ cache: 'reload' \}\)\)\)/);
+});
+
 test('Service Worker：只處理同網域 GET，不快取外部請求；網址都是相對路徑', () => {
   assert.match(sw, /req\.method !== 'GET' \|\| new URL\(req\.url\)\.origin !== self\.location\.origin\) return/);
   assert.doesNotMatch(sw, /https?:\/\//);
