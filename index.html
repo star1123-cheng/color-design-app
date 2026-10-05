@@ -52,7 +52,7 @@
               <label for="lightness">明度（越右越深）</label>
               <span class="range-value" id="lightness-value" aria-hidden="true">L 0.71</span>
             </div>
-            <input type="range" id="lightness" min="20" max="95" step="1" value="70">
+            <input type="range" id="lightness" min="20" max="95" step="1" value="45">
           </div>
 
           <div class="picker-actions">
@@ -157,16 +157,17 @@
         </div>
         <div class="panel" id="export-panel"></div>
       </section>
-    </div>
 
-    <section class="saved" id="saved" aria-labelledby="saved-title">
-      <div class="sechead">
-        <span class="pageno">收藏</span>
-        <h2 id="saved-title">我的收藏</h2>
-      </div>
-      <p class="hint" id="saved-empty">還沒有收藏。看到喜歡的配色，按「加入收藏」就會存在這台裝置上。</p>
-      <ul class="fav-list" id="fav-list" aria-label="收藏清單"></ul>
-    </section>
+      <!-- 收藏放在右欄最後：左欄固定在畫面上時，滑到底也不會蓋住收藏 -->
+      <section class="saved" id="saved" aria-labelledby="saved-title">
+        <div class="sechead">
+          <span class="pageno">收藏</span>
+          <h2 id="saved-title">我的收藏</h2>
+        </div>
+        <p class="hint" id="saved-empty">還沒有收藏。看到喜歡的配色，按「加入收藏」就會存在這台裝置上。</p>
+        <ul class="fav-list" id="fav-list" aria-label="收藏清單"></ul>
+      </section>
+    </div>
   </main>
 
   <nav class="bottomnav" aria-label="頁面導覽">

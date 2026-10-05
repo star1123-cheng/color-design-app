@@ -42,6 +42,15 @@ test('整合：推薦同時套用場景、投影與風格', () => {
   }
 });
 
+test('明度滑桿「越右越深」：滑桿值越大，L 越小；來回換算一致', async () => {
+  const { sliderToL, toSlider } = await import('../src/ui/picker.js');
+  assert.ok(sliderToL(90) < sliderToL(30), '右邊（值大）比較深');
+  assert.equal(sliderToL(20), 0.95);
+  assert.equal(sliderToL(95), 0.2);
+  assert.ok(toSlider(0.45) > toSlider(0.85), '深色的滑塊在右邊');
+  for (const L of [0.2, 0.45, 0.71, 0.95]) assert.equal(sliderToL(toSlider(L)), L);
+});
+
 test('明度滑桿：只改 L，不更換明度基準；新選色才更換', () => {
   const s = createState();
   const t = pickColor(s, '#5A86AE', { rebase: false });

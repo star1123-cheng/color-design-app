@@ -3,8 +3,10 @@ import { hexToOklch, normalizeHex, isHex, toOklchString } from '../color/oklch.j
 import { oklchToHex } from '../color/gamut.js';
 
 const $ = (id) => document.getElementById(id);
+// 滑桿「越右越深」（與標籤、軌道漸層一致）：滑桿值 v 對應 L = (L_MIN + L_MAX - v) / 100
 const L_MIN = 20, L_MAX = 95;
-const toSlider = (L) => Math.min(L_MAX, Math.max(L_MIN, Math.round(L * 100)));
+export const sliderToL = (v) => (L_MIN + L_MAX - Number(v)) / 100;
+export const toSlider = (L) => L_MIN + L_MAX - Math.min(L_MAX, Math.max(L_MIN, Math.round(L * 100)));
 
 /**
  * @param {{ onPick: (hex: string, opts: { rebase: boolean }) => void, getBase: () => number[] }} handlers
@@ -39,7 +41,7 @@ export function initPicker({ onPick, getBase }) {
 
   slider.addEventListener('input', () => {
     const [, C, H] = getBase();
-    onPick(oklchToHex([Number(slider.value) / 100, C, H]), { rebase: false });
+    onPick(oklchToHex([sliderToL(slider.value), C, H]), { rebase: false });
   });
 }
 
