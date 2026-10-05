@@ -1,0 +1,13 @@
+{
+  "name": "color-design-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "配色推薦 PWA：選一個顏色，自動推薦主色、輔色、底色、字色、點綴色",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

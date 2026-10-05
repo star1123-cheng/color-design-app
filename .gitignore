@@ -1,0 +1,21 @@
+# 套件與建置輸出
+node_modules/
+dist/
+
+# 環境變數與金鑰（絕對不可提交）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+*serviceAccountKey*.json
+.clasprc.json
+
+# 範例圖片（他人創作，只供內部參考，禁止提交）
+reference/
+
+# 系統與記錄檔
+*.log
+.DS_Store
+Thumbs.db
