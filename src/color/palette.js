@@ -30,10 +30,17 @@ function makeBackground(rng, { cool }) {
   return quantize([0.955 + rng() * 0.01, 0.012 + rng() * 0.004, 80 + rng() * 10]); // 暖底
 }
 
-function makeText(primary, bgHex, minContrast) {
+/**
+ * 字色：主色暖時取 H 45°、冷時取 H 240°，從 L 0.30 開始，依門檻做對比度修正（只調 L，最多 ±0.30）。
+ * @returns {{ hex: string, oklch: number[], ok: boolean, ratio: number, warning: string|null }}
+ */
+export function makeText(primary, bgHex, minContrast) {
   const H = isWarm(primary[2]) ? 45 : 240;
   const adj = adjustForContrast([0.3, 0.035, H], bgHex, minContrast);
-  return { ...quantize(adj.oklch), ok: adj.ok };
+  const q = quantize(adj.oklch);
+  const ratio = contrastRatio(q.hex, bgHex);
+  const warning = adj.ok ? null : `字色對底色的對比度只有 ${ratio.toFixed(2)}:1，未達 ${minContrast}:1`;
+  return { ...q, ok: adj.ok, ratio, warning };
 }
 
 /** 點綴色：色相離主色與輔色都最遠；在 L 0.605–0.70 找彩度 ≥ 0.105 的位置 */
@@ -65,7 +72,7 @@ function buildOne(primary, candidate, ctx, rng) {
   const accentRatio = contrastRatio(accent.hex, background.hex);
   const grayDiff = Math.abs(primary.oklch[0] - secondary.oklch[0]);
 
-  if (!text.ok) warnings.push(`字色對底色的對比度只有 ${textRatio.toFixed(2)}:1，未達 ${ctx.minContrast}:1`);
+  if (text.warning) warnings.push(text.warning);
   if (!accent.ok) warnings.push(`點綴色對底色的對比度只有 ${accentRatio.toFixed(2)}:1，當按鈕邊框或圖表線條可能不夠清楚`);
   if (grayDiff < GRAYSCALE_MIN_DIFF) warnings.push('主色與輔色明度接近，列印成黑白時兩色難以分辨');
 

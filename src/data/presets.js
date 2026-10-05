@@ -1,18 +1,21 @@
 // 場景與風格預設（SPEC 4.5、4.6、4.7）
 // 字級為（假設）初值；介面微調下限為 0.8 倍（階段 3 實作）
 import { STYLE_PREFS, INSUFFICIENT_STYLES } from '../color/rules.js';
+import { CONTRAST } from '../color/contrast.js';
 
+// 對比門檻一律引用 contrast.js 的 CONTRAST（單一來源）
+// 海報：SPEC 4.7「遠距離閱讀，對比度採投影標準」
 export const SCENES = {
-  slides: { label: '上課簡報', unit: 'pt', title: 36, body: 20, maxPointsPerSlide: 3, minContrast: 4.5, projection: { title: 40, body: 24 } },
-  worksheet: { label: '學習單', unit: 'pt', title: 18, body: 12, maxPointsPerSlide: null, minContrast: 4.5, grayscaleCheck: true },
-  webpage: { label: '班級網頁', unit: 'px', title: 32, body: 18, maxPointsPerSlide: null, minContrast: 4.5, lineHeight: 1.6 },
-  poster: { label: '公布欄海報', unit: 'pt', title: 72, body: 28, maxPointsPerSlide: 3, minContrast: 7 },
+  slides: { label: '上課簡報', unit: 'pt', title: 36, body: 20, maxPointsPerSlide: 3, minContrast: CONTRAST.text, projection: { title: 40, body: 24 } },
+  worksheet: { label: '學習單', unit: 'pt', title: 18, body: 12, maxPointsPerSlide: null, minContrast: CONTRAST.text, grayscaleCheck: true },
+  webpage: { label: '班級網頁', unit: 'px', title: 32, body: 18, maxPointsPerSlide: null, minContrast: CONTRAST.text, lineHeight: 1.6 },
+  poster: { label: '公布欄海報', unit: 'pt', title: 72, body: 28, maxPointsPerSlide: 3, minContrast: CONTRAST.projectionText },
 };
 
 export const SCENE_KEYS = Object.keys(SCENES);
 
 /** 投影模式正文對比度（SPEC 4.5） */
-export const PROJECTION_MIN_CONTRAST = 7;
+export const PROJECTION_MIN_CONTRAST = CONTRAST.projectionText;
 
 /** 風格標籤（SPEC 4.6）；available = false 表示樣本不足、規則建置中 */
 export const STYLES = ['清新', '療癒', '復古', '商務', '森系', '夜間'].map((key) => ({
