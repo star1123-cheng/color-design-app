@@ -7,6 +7,7 @@ import { renderCards } from './ui/cards.js';
 import { renderPreview } from './ui/preview.js';
 import { renderGradients } from './ui/gradient.js';
 import { renderCustom } from './ui/custom.js';
+import { renderWebPalettes, ALL_SERIES } from './ui/web-palettes.js';
 import { PARTS, partsFor } from './data/parts.js';
 import { renderRoles } from './ui/roles.js';
 import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
@@ -142,7 +143,7 @@ function render() {
     onApply: (p) => {
       set(S.applyFavorite({ ...S.pickColor(state, p.colors.primary.hex), fav: p }, p), { recompute: true, keepFav: true });
       toast(`已套用收藏「${p.name}」`);
-      $('preview').scrollIntoView();
+      goTo('preview');
     },
     onRemove: (id) => { const r = removeFavorite(id); favorites = r.palettes; toast(r.message); render(); },
     onRename: (id, name) => { const r = renameFavorite(id, name); favorites = r.palettes; toast(r.message); render(); },
@@ -219,23 +220,52 @@ $('fav-add').addEventListener('click', () => {
   render();
 });
 
-// 底部導覽（手機）：推薦、預覽、匯出、收藏
-const NAV = { pick: ['palette', '推薦'], preview: ['eye', '預覽'], roles: ['share', '匯出'], saved: ['bookmark', '收藏'] };
+// 網路推薦配色：不隨配色變動，只在換系列時重畫
+let webSeries = ALL_SERIES;
+function renderWeb() {
+  renderWebPalettes($('webpal-filter'), $('webpal-list'), $('webpal-count'), webSeries, {
+    onSeries: (series) => { webSeries = series; renderWeb(); },
+    onUse: (color, p) => {
+      set(S.pickColor(state, color.hex), { recompute: true });
+      toast(`已用「${p.name}」的${color.name}當主色`);
+      goTo('pick', 'recs');
+    },
+  });
+}
+renderWeb();
+
+// 手機分頁（2026-10-06 使用者決定）：底部選單切換頁面，不再一路往下捲。
+// 每個區塊用 data-page 標示屬於哪一頁，CSS 依 body 的 data-page 只顯示那一頁；電腦版（≥ 1024 px）全部顯示。
+const NAV = { pick: ['palette', '推薦'], preview: ['eye', '預覽'], roles: ['share', '匯出'], web: ['pie', '網路配色'], saved: ['bookmark', '收藏'] };
+const PAGE_HASH = { pick: 'pick', preview: 'preview', roles: 'roles', web: 'webpal', saved: 'saved' };
+const HASH_PAGE = { ...Object.fromEntries(Object.entries(PAGE_HASH).map(([p, id]) => [id, p])), recs: 'pick' };
+const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+/** 顯示某一頁（手機）；push 為 true 時記進瀏覽紀錄，按「上一頁」可以回來 */
+function showPage(page, { push = false } = {}) {
+  const p = NAV[page] ? page : 'pick';
+  document.body.dataset.page = p;
+  document.querySelectorAll('[data-nav]').forEach((a) => (a.dataset.nav === p ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  if (push) history.pushState({ page: p }, '', `#${PAGE_HASH[p]}`);
+  if (!isDesktop()) window.scrollTo(0, 0);
+}
+
+/** 前往某個區塊：手機切換頁面，電腦版捲動到該區塊 */
+function goTo(page, id = PAGE_HASH[page]) {
+  if (isDesktop()) $(id).scrollIntoView();
+  else showPage(page, { push: true });
+}
+
 document.querySelectorAll('[data-nav]').forEach((a) => {
   const [ic, label] = NAV[a.dataset.nav];
   mount(a, h('span', { class: 'navicon' }, icon(ic)), h('span', { class: 'navlabel' }, label));
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    showPage(a.dataset.nav, { push: document.body.dataset.page !== a.dataset.nav });
+  });
 });
-if ('IntersectionObserver' in window) {
-  const links = [...document.querySelectorAll('[data-nav]:not([aria-disabled])')];
-  const io = new IntersectionObserver((entries) => {
-    for (const en of entries) {
-      if (!en.isIntersecting) continue;
-      const id = en.target.id === 'recs' ? 'pick' : en.target.id;
-      links.forEach((l) => (l.dataset.nav === id ? l.setAttribute('aria-current', 'true') : l.removeAttribute('aria-current')));
-    }
-  }, { rootMargin: '-40% 0px -55% 0px' });
-  ['pick', 'recs', 'preview', 'roles', 'saved'].forEach((id) => io.observe($(id)));
-}
+window.addEventListener('popstate', () => showPage(HASH_PAGE[location.hash.slice(1)] ?? 'pick'));
+showPage(HASH_PAGE[location.hash.slice(1)] ?? 'pick');
 
 set(state, { recompute: true });
 

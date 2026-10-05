@@ -27,6 +27,7 @@
   <link rel="modulepreload" href="src/data/schema.js">
   <link rel="modulepreload" href="src/data/template-palette.js">
   <link rel="modulepreload" href="src/data/templates.js">
+  <link rel="modulepreload" href="src/data/web-palettes.js">
   <link rel="modulepreload" href="src/export/ai-prompt.js">
   <link rel="modulepreload" href="src/export/card.js">
   <link rel="modulepreload" href="src/export/formats.js">
@@ -44,6 +45,7 @@
   <link rel="modulepreload" href="src/ui/public.js">
   <link rel="modulepreload" href="src/ui/roles.js">
   <link rel="modulepreload" href="src/ui/teacher.js">
+  <link rel="modulepreload" href="src/ui/web-palettes.js">
 </head>
 <body>
   <header class="topbar">
@@ -53,6 +55,7 @@
         <p>從容，面不改色</p>
       </div>
       <div class="topbar-actions">
+        <a class="btn desktop-only" href="#webpal" data-icon="pie">網路配色</a>
         <a class="btn desktop-only" href="#saved" data-icon="bookmark">收藏</a>
         <button type="button" class="btn btn-solid desktop-only" id="copy-all-top" data-icon="copy">複製全部 HEX</button>
       </div>
@@ -60,8 +63,9 @@
   </header>
 
   <main class="layout">
-    <!-- 左欄：01 選色、02 推薦；右欄：03 預覽、04 角色（手機依序堆疊） -->
-    <div class="col col-left">
+    <!-- 左欄：01 選色、02 推薦；右欄：03 預覽、04 角色、網路配色、收藏。
+         手機：底部選單切換頁面（data-page 標示每個區塊屬於哪一頁，main.js 設定 body 的 data-page） -->
+    <div class="col col-left" data-page="pick">
       <section class="pick" id="pick" aria-labelledby="pick-title">
         <div class="pagehead">
           <span class="pageno">01 / 04</span>
@@ -147,7 +151,7 @@
     </div>
 
     <div class="col col-right">
-      <section class="preview" id="preview" aria-labelledby="preview-title">
+      <section class="preview" id="preview" aria-labelledby="preview-title" data-page="preview">
         <div class="sechead">
           <span class="pageno">03 / 04</span>
           <h2 id="preview-title">預覽與檢查</h2>
@@ -178,7 +182,7 @@
         <div class="panel" id="share-panel"></div>
       </section>
 
-      <section class="roles" id="roles" aria-labelledby="roles-title">
+      <section class="roles" id="roles" aria-labelledby="roles-title" data-page="roles">
         <div class="roles-card">
           <div class="sechead">
             <span class="pageno">04 / 04</span>
@@ -191,8 +195,20 @@
         <div class="panel" id="export-panel"></div>
       </section>
 
+      <!-- 網路推薦配色（2026-10-06 使用者新增）：切分圓形色票＋色名與色碼 -->
+      <section class="webpal" id="webpal" aria-labelledby="webpal-title" data-page="web">
+        <div class="sechead">
+          <span class="pageno">靈感</span>
+          <h2 id="webpal-title">網路推薦配色</h2>
+          <span class="mono-note" id="webpal-count"></span>
+        </div>
+        <p class="hint">整理自網路上的熱門配色。點色名可以複製色碼；按「用這組推薦」會拿這組最鮮明的顏色當主色，幫你配出整套配色。</p>
+        <div class="chips" id="webpal-filter" role="group" aria-label="依系列篩選"></div>
+        <ul class="wp-list" id="webpal-list" aria-label="網路推薦配色清單"></ul>
+      </section>
+
       <!-- 收藏放在右欄最後：左欄固定在畫面上時，滑到底也不會蓋住收藏 -->
-      <section class="saved" id="saved" aria-labelledby="saved-title">
+      <section class="saved" id="saved" aria-labelledby="saved-title" data-page="saved">
         <div class="sechead">
           <span class="pageno">收藏</span>
           <h2 id="saved-title">我的收藏</h2>
@@ -207,6 +223,7 @@
     <a class="navlink" href="#pick" data-nav="pick"></a>
     <a class="navlink" href="#preview" data-nav="preview"></a>
     <a class="navlink" href="#roles" data-nav="roles"></a>
+    <a class="navlink" href="#webpal" data-nav="web"></a>
     <a class="navlink" href="#saved" data-nav="saved"></a>
   </nav>
 

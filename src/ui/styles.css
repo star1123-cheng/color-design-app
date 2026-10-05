@@ -574,12 +574,49 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
 }
 .navicon { display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; }
 .navicon svg { width: 22px; height: 22px; flex: 0 0 22px; }
-.navlink[aria-current="true"] { color: var(--mist-deep); font-weight: 700; }
-.navlink[aria-current="true"] .navicon {
+.navlink[aria-current="page"] { color: var(--mist-deep); font-weight: 700; }
+.navlink[aria-current="page"] .navicon {
   background: var(--mist-pale);
   color: var(--mist-deep);
 }
 .navlink[aria-disabled="true"] { cursor: not-allowed; }
+
+/* ---------- 手機分頁（2026-10-06 使用者決定）：底部選單切換頁面，電腦版不套用 ---------- */
+@media (max-width: 1023.98px) {
+  /* 只隱藏「不是這一頁」的區塊，不改動區塊本身的排版；推薦頁（左欄）時右欄整個隱藏 */
+  body[data-page="pick"] .layout .col-right,
+  body[data-page="preview"] .layout [data-page]:not([data-page="preview"]),
+  body[data-page="roles"] .layout [data-page]:not([data-page="roles"]),
+  body[data-page="web"] .layout [data-page]:not([data-page="web"]),
+  body[data-page="saved"] .layout [data-page]:not([data-page="saved"]) { display: none; }
+  .navlink { min-width: 0; }
+  .navicon { width: 48px; }
+}
+
+/* ---------- 網路推薦配色（2026-10-06 使用者新增） ---------- */
+.webpal { min-width: 0; }
+.webpal .hint { margin: 0 0 10px; }
+.wp-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.wp {
+  display: grid; gap: 10px; align-content: start; padding: 18px; border-radius: var(--r-md);
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card);
+}
+.wp-pie { width: 132px; aspect-ratio: 1; border-radius: 50%; justify-self: center; margin: 4px 0 6px; box-shadow: 0 0 0 1px var(--hair), 0 0 0 6px var(--cream); }
+.wp-head { display: grid; gap: 2px; text-align: center; }
+.wp-name { margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--ink); }
+.wp-series { font-size: 12px; color: var(--ink-2); letter-spacing: 0.06em; }
+.wp-scene { margin: 0; font-size: 13px; color: var(--ink-2); text-align: center; }
+.wp-colors { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.wp-color {
+  width: 100%; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: var(--tap); padding: 0 10px; border: 0; border-radius: var(--r-sm); cursor: pointer;
+  background: transparent; color: var(--ink); text-align: left; font-size: 14px;
+}
+.wp-color:hover { background: var(--cream); }
+.wp-dot { width: 20px; height: 20px; border-radius: 50%; box-shadow: 0 0 0 1px var(--hair); }
+.wp-cname { overflow-wrap: anywhere; }
+.wp-hex { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
+.wp-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 
 /* ---------- 提示訊息 ---------- */
 .toast {

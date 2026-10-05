@@ -7,6 +7,7 @@
 // 3. 觸控目標 ≥ 44 px（DESIGN 第 4 節）：可點擊元件的 CSS 尺寸。
 // 4. 網頁不得讀取 reference/；reference/ 未被 Git 追蹤。
 // 5. 介面、src/、docs/ 等不得出現原始色名或拼音（名稱清單即時讀自 reference/，不寫進本檔）。
+//    例外（2026-10-06 使用者決定，SPEC 2-7）：src/data/web-palettes.js 可含色名，但仍不得含檔名與拼音。
 // 6. 網頁防護：src/ 不使用 innerHTML；不連外部網址。
 // 7. 範本庫 src/data/templates.js：不含原始色名或拼音、HEX 格式、數量一致、編號不重複、風格與來源標示。
 // 8. 金鑰與機敏檔：金鑰樣式字串、.env.example 沒有填值、.gitignore 必要項目、Git 沒有追蹤機敏檔。
@@ -123,8 +124,9 @@ try {
 }
 
 // ---------- 5：原始色名與拼音 ----------
+const WEB_PAL_FILE = 'src/data/web-palettes.js';
 const scanFiles = [
-  ...webFiles,
+  ...webFiles.filter((f) => f !== WEB_PAL_FILE),
   ...walk('docs', ['.md', '.csv']),
   ...walk('scripts', ['.js']).filter((f) => f !== 'scripts/audit.js'),
   ...walk('tests', ['.js']),
@@ -161,6 +163,14 @@ if (!exists('reference')) {
     const t = read(TPL_FILE);
     const tplHits = [...words].filter((w) => t.includes(w));
     check('範本庫', `${TPL_FILE} 不含原始色名或拼音（檢查 ${words.size} 個名稱）`, tplHits.length === 0, tplHits.slice(0, 10).join('、'));
+  }
+
+  // 網路推薦配色：使用者決定顯示色名，只檢查不含檔名與拼音（英數字的名稱）
+  if (exists(WEB_PAL_FILE)) {
+    const t = read(WEB_PAL_FILE);
+    const ascii = [...words].filter((w) => /^[ -~]+$/.test(w));
+    const webHits = ascii.filter((w) => t.includes(w));
+    check('原始名稱', `${WEB_PAL_FILE} 依使用者決定可含色名，不含檔名或拼音（檢查 ${ascii.length} 個）`, webHits.length === 0, webHits.slice(0, 10).join('、'));
   }
 
   const hits = [];
