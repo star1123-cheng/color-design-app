@@ -38,7 +38,7 @@ export function makeTemplate(row) {
     if (key && !colors[key]) { colors[key] = row.hex[i]; source[key] = SOURCE_SAMPLE; } else unused.push(row.hex[i]);
   });
 
-  const engine = recommend(colors.primary, { mode: 'public', scene: 'slides', bgFamilies: ['warm'], extendedTypes: false })[0].colors;
+  const engine = recommend(colors.primary, { mode: 'public', scene: 'slides', bgFamilies: ['warm'], extendedTypes: false, accentHue: 'far' })[0].colors;
   for (const key of ['background', 'secondary', 'accent']) {
     if (!colors[key]) { colors[key] = engine[key].hex; source[key] = SOURCE_ENGINE; }
   }

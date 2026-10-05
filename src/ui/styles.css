@@ -452,6 +452,16 @@ input[type="range"]::-moz-range-thumb {
 .grad-desc, .grad-note { font-size: 13px; color: var(--ink-2); }
 .grad-hexes { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); margin: 2px 0; overflow-wrap: anywhere; }
 .grad-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.grad-opt { display: grid; gap: 6px; margin-top: 12px; }
+.grad-opt-label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+/* 預覽中的漸層元件（2026-10-06 使用者新增） */
+.grad-banner { padding: 2.4cqw 3cqw; border-radius: var(--r-sm); margin-bottom: 2.4cqw; }
+.grad-banner .slide-title, .grad-banner .sheet-title { margin-bottom: 0; }
+.grad-plate { display: inline-block; padding: 1cqw 2cqw; border-radius: var(--r-sm); }
+.web-copy.grad-plate { display: block; padding: 2cqw; }
+.slide-kicker.is-pill { display: inline-block; padding: 0.4cqw 1.8cqw; border-radius: 999px; opacity: 1; }
+.slide-no.is-pill { padding: 0.4cqw 1.8cqw; border-radius: 999px; opacity: 1; }
+.sheet-corner { position: absolute; top: -6cqw; right: -6cqw; width: 20cqw; height: 20cqw; border-radius: 50%; opacity: 0.85; pointer-events: none; }
 .grad-actions .btn[aria-pressed="true"] {
   background: var(--mist-pale);
   color: var(--mist-ink);

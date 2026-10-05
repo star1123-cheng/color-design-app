@@ -107,12 +107,25 @@ export function makeText(primary, bgHex, minContrast, C = 0.035) {
   return { ...q, ok: adj.ok, ratio, warning };
 }
 
-/** 點綴色：色相離主色與輔色都最遠；在 L 0.605–0.70 找彩度 ≥ 0.105 的位置（彩度上限 maxC） */
-function makeAccent(primary, secondary, bgHex, maxC = 0.125) {
+// 點綴色色相（2026-10-06 使用者決定）：預設取主色的相鄰色相（±35°，挑離輔色較遠的一側），
+// 彩度壓在 SPEC 下限附近，讓點綴色與整組同一色系、不突兀。far 為舊算法（離主色與輔色都最遠），範本庫產生腳本沿用。
+const ACCENT_NEAR = { offset: 35, maxC: 0.108 };
+
+/** 點綴色：在 L 0.605–0.70 找彩度 ≥ 0.105 的位置（彩度上限 maxC） */
+function makeAccent(primary, secondary, bgHex, maxC = 0.125, hueMode = 'near') {
   let bestH = 0, bestScore = -1;
-  for (let h = 0; h < 360; h += 5) {
-    const score = Math.min(hueDiff(h, primary[2]), hueDiff(h, secondary[2]));
-    if (score > bestScore) { bestScore = score; bestH = h; }
+  if (hueMode === 'far') {
+    for (let h = 0; h < 360; h += 5) {
+      const score = Math.min(hueDiff(h, primary[2]), hueDiff(h, secondary[2]));
+      if (score > bestScore) { bestScore = score; bestH = h; }
+    }
+  } else {
+    for (const sign of [1, -1]) {
+      const h = normalizeHue(primary[2] + sign * ACCENT_NEAR.offset);
+      const score = hueDiff(h, secondary[2]);
+      if (score > bestScore) { bestScore = score; bestH = h; }
+    }
+    maxC = Math.min(maxC, ACCENT_NEAR.maxC);
   }
   let lch = null;
   for (let L = 0.605; L <= 0.70 + 1e-9; L += 0.005) {
@@ -137,7 +150,7 @@ function buildOne(primary, candidate, ctx, rng, family) {
   if (ctx.projection) sC = Math.min(sC, PROJECTION.largeAreaCmax - MARGIN); // 投影：大面積 C ≤ 0.12
   const secondary = quantize([sL, sC, sH]);
   const text = makeText(primary.oklch, background.hex, ctx.minContrast, business ? BUSINESS.textC : undefined);
-  const accent = makeAccent(primary.oklch, secondary.oklch, background.hex, business ? BUSINESS.accentC : undefined);
+  const accent = makeAccent(primary.oklch, secondary.oklch, background.hex, business ? BUSINESS.accentC : undefined, ctx.accentHue);
 
   const textRatio = contrastRatio(text.hex, background.hex);
   const accentRatio = contrastRatio(accent.hex, background.hex);
@@ -202,9 +215,10 @@ export function pickDiverse(sorted, n = 5) {
 /**
  * 依選色產生 3–5 組推薦（SPEC 第 5 節）。
  * @param {string} seedHex 使用者選的顏色
- * @param {{ mode?: 'teacher'|'public', scene?: string, style?: string|null, projection?: boolean, seed?: number, bgFamilies?: string[], extendedTypes?: boolean }} [opts]
- *   bgFamilies：限定底色家族；extendedTypes：false 時只產生舊版的冷暖、深淺對比型候選。
- *   範本庫腳本傳 { bgFamilies: ['warm'], extendedTypes: false } 可維持舊版結果
+ * @param {{ mode?: 'teacher'|'public', scene?: string, style?: string|null, projection?: boolean, seed?: number, bgFamilies?: string[], extendedTypes?: boolean, accentHue?: 'near'|'far' }} [opts]
+ *   bgFamilies：限定底色家族；extendedTypes：false 時只產生舊版的冷暖、深淺對比型候選；
+ *   accentHue：點綴色取主色相鄰色相（near，預設）或舊版最遠色相（far）。
+ *   範本庫腳本傳 { bgFamilies: ['warm'], extendedTypes: false, accentHue: 'far' } 可維持舊版結果
  * @returns {object[]} 符合 SPEC 3.1 的配色陣列（已排序）
  */
 export function recommend(seedHex, opts = {}) {
@@ -230,7 +244,8 @@ export function recommend(seedHex, opts = {}) {
   }
 
   const primary = quantize(primaryLch);
-  const ctx = { mode, scene, style, projection, minContrast: minTextContrast(scene, projection), baseWarnings };
+  const ctx = { mode, scene, style, projection, minContrast: minTextContrast(scene, projection), baseWarnings,
+    accentHue: opts.accentHue === 'far' ? 'far' : 'near' };
   const families = (opts.bgFamilies ?? STYLE_BG[style] ?? BG_FAMILIES).filter((f) => BG_FAMILIES.includes(f));
   if (families.length === 0) families.push('warm');
   const results = secondaryCandidates(primary.oklch, rng, { extended: opts.extendedTypes !== false }).map((c, i) => {

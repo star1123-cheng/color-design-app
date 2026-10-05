@@ -16,7 +16,9 @@ export function createState(overrides = {}) {
     projection: false,        // 投影模式
     typo: null,               // 字級微調（null 表示用場景預設值）
     style: null,              // 風格（null 表示不限）
-    gradient: null,           // 套用到預覽的漸層（null 表示不用漸層）
+    gradient: null,           // 選定的漸層（null 表示不用漸層），會套用到預覽並放進匯出
+    gradientTarget: 'hero',   // 漸層用在哪個元件：background、hero、button、deco
+    gradientDir: 'diag',      // 漸層方向：diag、h、v、radial
     selected: 0,
     ...overrides,
     hex,                                          // 目前選色（大寫 6 碼）
@@ -78,3 +80,7 @@ export const recommendOptions = (state) =>
 
 /** 把字級微調寫進配色資料（SPEC 3.1 的 typography） */
 export const withTypography = (palette, state) => ({ ...palette, typography: currentTypography(state) });
+
+/** 目前選定的漸層設定（給預覽與匯出共用） */
+export const gradientSelection = (state) =>
+  ({ key: state.gradient ?? null, target: state.gradientTarget ?? 'hero', dir: state.gradientDir ?? 'diag' });

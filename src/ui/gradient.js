@@ -1,20 +1,26 @@
-// 漸層搭配建議（2026-10-06 使用者新增）：用目前配色組出幾種漸層，可複製 CSS 或套用到預覽。
+// 漸層搭配建議（2026-10-06 使用者新增）：用目前配色組出 5 種漸層，可複製 CSS 或套用到預覽。
+// 使用者可自選漸層用在哪個元件、方向；選定的漸層也會放進「匯出」與「複製給 AI」。
 // 漸層色票屬於「使用者資料」，以 inline style 設定。
 import { h, icon, mount } from './dom.js';
 import { copyText } from './copy.js';
-import { gradientSuggestions } from '../color/gradient.js';
+import { gradientSuggestions, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+
+const seg = (label, options, current, onPick) => h('div', { class: 'chips chips-wrap', role: 'group', 'aria-label': label },
+  Object.entries(options).map(([key, o]) => h('button', {
+    type: 'button', class: 'chip', title: o.desc, 'aria-pressed': String(current === key), on: { click: () => onPick(key) },
+  }, o.label)));
 
 /**
  * @param {HTMLElement} panel
  * @param {object} palette 目前套用中的配色
- * @param {string|null} selected 已套用到預覽的漸層 key
+ * @param {{ key: string|null, target: string, dir: string }} sel 選定的漸層、用在哪個元件、方向
  * @param {number} minText 放字需要的對比度
- * @param {(key: string|null) => void} onApply
+ * @param {{ onApply: (key: string|null) => void, onTarget: (t: string) => void, onDir: (d: string) => void }} handlers
  */
-export function renderGradients(panel, palette, selected, minText, onApply) {
-  const list = gradientSuggestions(palette.colors, { min: minText });
+export function renderGradients(panel, palette, sel, minText, { onApply, onTarget, onDir }) {
+  const list = gradientSuggestions(palette.colors, { min: minText, dir: sel.dir });
   const item = (g) => {
-    const on = selected === g.key;
+    const on = sel.key === g.key;
     return h('li', { class: 'grad' },
       h('div', {
         class: 'grad-swatch', 'data-user-color': true, role: 'img',
@@ -32,7 +38,7 @@ export function renderGradients(panel, palette, selected, minText, onApply) {
         h('button', {
           type: 'button', class: 'btn', 'aria-pressed': String(on),
           on: { click: () => onApply(on ? null : g.key) },
-        }, icon(on ? 'check' : 'eye'), on ? '預覽中' : '套用到預覽'),
+        }, icon(on ? 'check' : 'eye'), on ? '已選用' : '選用這個漸層'),
         h('button', {
           type: 'button', class: 'btn',
           on: { click: () => copyText(`background: ${g.css};`, `${g.name} CSS`) },
@@ -43,6 +49,8 @@ export function renderGradients(panel, palette, selected, minText, onApply) {
     h('div', { class: 'typo-head' },
       h('h3', {}, '漸層搭配建議'),
       h('span', { class: 'mono-note' }, `${list.length} 種`)),
-    h('p', { class: 'hint' }, '用目前的配色組成漸層，適合封面、橫幅或按鈕。按「套用到預覽」可以在上面的預覽看看效果。'),
+    h('p', { class: 'hint' }, '用目前的配色組成漸層。先選「用在哪裡」和「方向」，再按「選用這個漸層」，上面的預覽會跟著變，匯出與複製給 AI 也會一起帶上這個漸層。'),
+    h('div', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '用在哪裡'), seg('漸層用在哪裡', GRADIENT_TARGETS, sel.target, onTarget)),
+    h('div', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '方向'), seg('漸層方向', GRADIENT_DIRS, sel.dir, onDir)),
     h('ul', { class: 'grad-list' }, list.map(item)));
 }

@@ -1,25 +1,52 @@
 // 匯出格式（SPEC 第 6 節）：HEX 清單、RGB、CSS 變數、oklch() 版本、Google 簡報主題色對應。
 // 全部從 SPEC 3.1 的配色 JSON 產生，不另存資料。
+// 2026-10-06 使用者新增：選定的漸層（g，由 selectedGradient 產生）會附在每種格式後面；沒選時內容與舊版相同。
 import { toOklchString, toRgbString } from '../color/oklch.js';
+import { pickGradient, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+import { minTextContrast } from '../data/presets.js';
 import { oklchToHex } from '../color/gamut.js';
 import { adjustForContrast, CONTRAST } from '../color/contrast.js';
 import { ROLES } from '../data/schema.js';
 
 export const ROLE_LABELS = { primary: '主色', secondary: '輔色', background: '底色', text: '字色', accent: '點綴色' };
 
+/**
+ * 選定的漸層（用原始配色計算，不受模擬檢視影響）；放字的對比門檻依配色的場景與投影模式。
+ * @param {object} p SPEC 3.1 配色
+ * @param {{ key: string|null, target?: string, dir?: string }|null} sel
+ */
+export function selectedGradient(p, sel) {
+  if (!sel?.key) return null;
+  const min = minTextContrast(p.context?.scene ?? 'slides', Boolean(p.context?.projection));
+  return pickGradient(p.colors, { ...sel, min });
+}
+
+/** 漸層的中文說明（名稱、用途、方向、字色），各格式共用 */
+export const gradientNote = (g) => `${g.name}，用在${GRADIENT_TARGETS[g.target].label}，${GRADIENT_DIRS[g.dir].desc}`
+  + `，${g.text.hex ? `上面的字用 ${g.text.hex}` : '上面放字要先加一塊底色'}`;
+
+const listWithGradient = (lines, g, fmt) => (g
+  ? `${lines}\n\n漸層（${gradientNote(g)}）\n${g.stops.map(fmt).join(' → ')}`
+  : lines);
+const cssWithGradient = (vars, g) => `:root {\n${vars.join('\n')}${g
+  ? `\n  /* 漸層：${gradientNote(g)} */\n  --gradient-${g.key}: ${g.css};`
+  : ''}\n}`;
+
 /** HEX 清單（每行「角色 色碼」） */
-export const hexList = (p) => ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${p.colors[r].hex}`).join('\n');
+export const hexList = (p, g = null) =>
+  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${p.colors[r].hex}`).join('\n'), g, (s) => s.hex);
 
 /** RGB 清單 */
-export const rgbList = (p) => ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${toRgbString(p.colors[r].hex)}`).join('\n');
+export const rgbList = (p, g = null) =>
+  listWithGradient(ROLES.map((r) => `${ROLE_LABELS[r].padEnd(3, '　')} ${toRgbString(p.colors[r].hex)}`).join('\n'), g, (s) => toRgbString(s.hex));
 
 /** CSS 變數（HEX） */
-export const cssVariables = (p) =>
-  `:root {\n${ROLES.map((r) => `  --color-${r}: ${p.colors[r].hex};`).join('\n')}\n}`;
+export const cssVariables = (p, g = null) =>
+  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${p.colors[r].hex};`), g);
 
-/** CSS 變數（oklch()，較新瀏覽器；舊瀏覽器請用 HEX 版） */
-export const cssOklch = (p) =>
-  `:root {\n${ROLES.map((r) => `  --color-${r}: ${toOklchString(p.colors[r].oklch)};`).join('\n')}\n}`;
+/** CSS 變數（oklch()，較新瀏覽器；舊瀏覽器請用 HEX 版）。漸層沿用 HEX 寫法，相容性較好 */
+export const cssOklch = (p, g = null) =>
+  cssWithGradient(ROLES.map((r) => `  --color-${r}: ${toOklchString(p.colors[r].oklch)};`), g);
 
 /** 主色或輔色調深到在底色上 ≥ 4.5:1（連結、標題可用）；做不到時改用字色 */
 function readable(c, role) {
@@ -51,5 +78,10 @@ export function slidesTheme(p) {
   ];
 }
 
-export const slidesThemeText = (p) =>
-  slidesTheme(p).map((x) => `${x.field}：${x.hex}（${x.from}）`).join('\n');
+/** Google 簡報：主題色沒有漸層欄位，漸層請在「背景」或圖案「填滿顏色」→「漸層」→「自訂」設定 */
+export const slidesThemeText = (p, g = null) => {
+  const theme = slidesTheme(p).map((x) => `${x.field}：${x.hex}（${x.from}）`).join('\n');
+  return g
+    ? `${theme}\n\n漸層（${gradientNote(g)}）\n${g.stops.map((s) => s.hex).join(' → ')}\n設定位置：背景或圖案的「填滿顏色」→「漸層」→「自訂」`
+    : theme;
+};

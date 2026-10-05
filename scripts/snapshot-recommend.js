@@ -8,7 +8,7 @@ const SEEDS = ['#78A5CE', '#D98C6A', '#6BAA75', '#B58BC4', '#C9A24D', '#4F7CAC',
 const legacy = process.argv[2] === 'legacy';
 const outPath = process.argv[3];
 if (!outPath) { console.error('請指定輸出檔路徑'); process.exit(1); }
-const opts = legacy ? { bgFamilies: ['warm'], extendedTypes: false } : {};
+const opts = legacy ? { bgFamilies: ['warm'], extendedTypes: false, accentHue: 'far' } : {};
 
 const out = SEEDS.map((hex) => ({
   hex,

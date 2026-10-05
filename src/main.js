@@ -108,11 +108,16 @@ function render() {
   // 2026-10-06 使用者決定：拿掉預覽下方的檢查清單
   const minText = minTextContrast(state.scene, state.projection);
   renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
+  const grad = S.gradientSelection(state);
   renderPreview($('stage'), palette, state.previewType, $('ratio-wide'),
-    { simulate: state.simulate, gradient: state.gradient, scale: S.typographyScale(state) });
-  renderGradients($('gradient-panel'), palette, state.gradient, minText, (gradient) => {
-    set({ ...state, gradient });
-    if (gradient) $('stage').scrollIntoView({ block: 'center' });
+    { simulate: state.simulate, gradient: grad, minText, scale: S.typographyScale(state) });
+  renderGradients($('gradient-panel'), palette, grad, minText, {
+    onApply: (gradient) => {
+      set({ ...state, gradient });
+      if (gradient) $('stage').scrollIntoView({ block: 'center' });
+    },
+    onTarget: (gradientTarget) => set({ ...state, gradientTarget }),
+    onDir: (gradientDir) => set({ ...state, gradientDir }),
   });
   renderTypography($('typo-panel'), state, {
     onAdjust: (key, delta) => set(S.adjustTypography(state, key, delta)),
@@ -121,7 +126,7 @@ function render() {
   renderShareCard($('share-panel'), palette);
 
   renderRoles($('role-list'), palette, [$('copy-all-top')]);
-  renderExport($('export-panel'), palette, state, {
+  renderExport($('export-panel'), palette, { ...state, gradient: grad }, {
     onFormat: (format) => set({ ...state, format }),
     onAiFormat: (aiFormat) => set({ ...state, aiFormat }),
   });

@@ -30,7 +30,7 @@ test('漸層建議：每種都有色碼、CSS，字色標示可用時每一段�
   for (const hex of ['#78A5CE', '#E07A5F', '#2F6B4F', '#F2C94C', '#7A5C99']) {
     const p = recommend(hex, { mode: 'teacher', scene: 'slides' })[0];
     const list = gradientSuggestions(p.colors, { min: 4.5 });
-    assert.deepEqual(list.map((g) => g.key), ['soft', 'main', 'accent', 'deep']);
+    assert.deepEqual(list.map((g) => g.key), ['soft', 'analog', 'main', 'accent', 'deep']);
     for (const g of list) {
       assert.ok(g.stops.length >= 3);
       for (const s of g.stops) assert.match(s.hex, /^#[0-9A-F]{6}$/);
