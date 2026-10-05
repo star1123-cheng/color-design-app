@@ -63,6 +63,7 @@ const backgroundFromSpec = {
   暖底: (() => { const r = row(s42, '底色（暖）'); return { L: range(r[1]), C: range(r[2]), H: range(r[3]) }; })(),
   冷底: (() => { const r = row(s42, '底色（冷）'); return { L: range(r[1]), C: [0, le(r[2])], H: range(r[3]) }; })(),
   中性底: (() => { const r = row(s42, '底色（中性）'); return { L: range(r[1]), C: [0, le(r[2])] }; })(),
+  色調底: (() => { const r = row(s42, '底色（色調）'); return { L: range(r[1]), C: [0, le(r[2])] }; })(),
 };
 const withoutName = ({ name, ...rest }) => rest;
 
@@ -81,7 +82,7 @@ test('RANGES 輔色四型等於 SPEC 4.2', () => {
   }
 });
 
-test('RANGES 底色三型等於 SPEC 4.2', () => {
+test('RANGES 底色四型等於 SPEC 4.2', () => {
   assert.equal(RANGES.background.length, Object.keys(backgroundFromSpec).length);
   for (const b of RANGES.background) {
     assert.ok(backgroundFromSpec[b.name], `SPEC 沒有「${b.name}」`);
@@ -141,7 +142,7 @@ test('STYLE_PREFS 數值等於 SPEC 4.6（療癒、清新、森系、商務）',
 });
 
 test('STYLE_PREFS 清新的底色文字等於 SPEC 4.6「其他」欄', () => {
-  const other = row(s46, '清新')[3]; // SPEC 4.6：底色暖白或中性白
+  const other = row(s46, '清新')[3]; // SPEC 4.6：底色暖白、中性白或色調底
   const m = /^底色(.+)$/.exec(other);
   assert.ok(m, 'SPEC 4.6 清新「其他」欄格式無法解析');
   assert.equal(STYLE_PREFS.清新.background, m[1]);

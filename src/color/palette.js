@@ -20,7 +20,7 @@ const MARGIN = 0.003;
 export const PROJECTION = { bgLmin: 0.95, largeAreaCmax: 0.12 };
 
 // 商務（SPEC 4.6）：整組平均 C ≤ 0.05。點綴色 C 至少 0.10（4.2），所以主色、輔色、字色的彩度都要壓低
-const BUSINESS = { primaryC: [0.03, 0.045], secondaryC: { 冷暖對比型: 0.045, 深淺對比型: 0.03 }, accentC: 0.108, textC: 0.02 };
+const BUSINESS = { primaryC: [0.03, 0.045], secondaryC: { 冷暖對比型: 0.045, 深淺對比型: 0.03, 同色系型: 0.03, 中性輔色型: 0.02 }, accentC: 0.108, textC: 0.02 };
 
 /** 風格偏好的中文說明（介面與警告共用） */
 export const STYLE_HINTS = { 療癒: '粉、紫、橘色系', 清新: '青藍色系', 森系: '綠色系', 商務: '低彩度，搭一個深色' };
@@ -66,9 +66,32 @@ export function softenPrimary(lch) {
 /** 暖色判斷（用於字色色相） */
 const isWarm = (H) => H < 110 || H >= 330;
 
-function makeBackground(rng, { cool }) {
-  if (cool) return quantize([0.97, 0.006, 250]);                          // 冷底
-  return quantize([0.955 + rng() * 0.01, 0.012 + rng() * 0.004, 80 + rng() * 10]); // 暖底
+// 底色家族（SPEC 4.2）：色調底（沿用配色的色相）、暖、冷、中性
+export const BG_FAMILIES = ['tint', 'warm', 'cool', 'neutral'];
+// 風格對底色的限制（SPEC 4.6）：療癒、森系＝暖白或色調底；清新＝暖白、中性白或色調底；其餘不限
+export const STYLE_BG = { 療癒: ['warm', 'tint'], 森系: ['warm', 'tint'], 清新: ['warm', 'neutral', 'tint'] };
+// 依候選順序（冷暖 ×3、深淺 ×2、同色系 ×2、中性輔色）安排底色，讓最後挑出的 5 組底色有變化
+const BG_ORDER = ['tint', 'tint', 'tint', 'neutral', 'neutral', 'tint', 'cool', 'warm'];
+
+/**
+ * 依底色家族產生底色；warm 的亂數呼叫順序與舊版相同，結果不變。
+ * tint（色調底）：取 hue 的淡色，投影模式維持 L ≥ 0.95（SPEC 4.5）。
+ */
+export function makeBackground(rng, { family = 'warm', hue = 80, projection = false } = {}) {
+  const j = rng();
+  if (family === 'tint') {
+    const L = projection ? 0.958 + j * 0.008 : 0.935 + j * 0.02;                                   // SPEC：L 0.92–0.98
+    return quantize([L, Math.min(0.028, 0.018 + rng() * 0.008, maxChroma(L, hue) - 0.004), hue]); // SPEC：C ≤ 0.035
+  }
+  if (family === 'cool') return quantize([0.965 + j * 0.01, 0.006 + rng() * 0.004, 245 + rng() * 30]); // SPEC：L 0.93–0.98、C ≤ 0.012、H 230–290
+  if (family === 'neutral') return quantize([0.96 + j * 0.015, 0.001 + rng() * 0.003, 0]);             // SPEC：C ≤ 0.006
+  return quantize([0.955 + j * 0.01, 0.012 + rng() * 0.004, 80 + rng() * 10]);                         // 暖底（舊版）
+}
+
+/** 第 i 個候選用哪種底色：先照 BG_ORDER，風格不允許時改用允許清單輪流 */
+function familyFor(i, families) {
+  const want = BG_ORDER[i % BG_ORDER.length];
+  return families.includes(want) ? want : families[i % families.length];
 }
 
 /**
@@ -102,10 +125,13 @@ function makeAccent(primary, secondary, bgHex, maxC = 0.125) {
   return { ...quantize(adj.oklch), ok: adj.ok };
 }
 
-function buildOne(primary, candidate, ctx, rng) {
+function buildOne(primary, candidate, ctx, rng, family) {
   const warnings = [...ctx.baseWarnings];
   const business = ctx.style === '商務';
-  const background = makeBackground(rng, { cool: ctx.projection });
+  // 色調底：同色系、中性輔色型沿用主色色相（整組更和諧）；對比型沿用輔色色相（與主色互相襯托）
+  const harmonious = candidate.type === '同色系型' || candidate.type === '中性輔色型';
+  const hue = harmonious ? primary.oklch[2] : candidate.oklch[2];
+  const background = makeBackground(rng, { family, hue, projection: ctx.projection });
   let [sL, sC, sH] = candidate.oklch;
   if (business) sC = BUSINESS.secondaryC[candidate.type] ?? sC;
   if (ctx.projection) sC = Math.min(sC, PROJECTION.largeAreaCmax - MARGIN); // 投影：大面積 C ≤ 0.12
@@ -159,9 +185,26 @@ function buildOne(primary, candidate, ctx, rng) {
 }
 
 /**
+ * 從已排序的候選挑出 n 組：每種輔色類型先取分數最高的一組，剩下的名額優先給同色系型（相近色、和諧感），
+ * 再依分數補滿；結果維持原排序。只有舊版 5 組候選時，結果與舊版相同。
+ */
+export function pickDiverse(sorted, n = 5) {
+  const picked = new Set();
+  const types = new Set();
+  for (const r of sorted) {
+    if (picked.size < n && !types.has(r.palette.name)) { types.add(r.palette.name); picked.add(r); }
+  }
+  const rest = [...sorted.filter((r) => r.palette.name === '同色系型'), ...sorted];
+  for (const r of rest) if (picked.size < n) picked.add(r);
+  return sorted.filter((r) => picked.has(r));
+}
+
+/**
  * 依選色產生 3–5 組推薦（SPEC 第 5 節）。
  * @param {string} seedHex 使用者選的顏色
- * @param {{ mode?: 'teacher'|'public', scene?: string, style?: string|null, projection?: boolean, seed?: number }} [opts]
+ * @param {{ mode?: 'teacher'|'public', scene?: string, style?: string|null, projection?: boolean, seed?: number, bgFamilies?: string[], extendedTypes?: boolean }} [opts]
+ *   bgFamilies：限定底色家族；extendedTypes：false 時只產生舊版的冷暖、深淺對比型候選。
+ *   範本庫腳本傳 { bgFamilies: ['warm'], extendedTypes: false } 可維持舊版結果
  * @returns {object[]} 符合 SPEC 3.1 的配色陣列（已排序）
  */
 export function recommend(seedHex, opts = {}) {
@@ -188,14 +231,16 @@ export function recommend(seedHex, opts = {}) {
 
   const primary = quantize(primaryLch);
   const ctx = { mode, scene, style, projection, minContrast: minTextContrast(scene, projection), baseWarnings };
-  const results = secondaryCandidates(primary.oklch, rng).map((c, i) => {
-    const r = buildOne(primary, c, ctx, rng);
+  const families = (opts.bgFamilies ?? STYLE_BG[style] ?? BG_FAMILIES).filter((f) => BG_FAMILIES.includes(f));
+  if (families.length === 0) families.push('warm');
+  const results = secondaryCandidates(primary.oklch, rng, { extended: opts.extendedTypes !== false }).map((c, i) => {
+    const r = buildOne(primary, c, ctx, rng, familyFor(i, families));
     r.order = i;
     return r;
   });
   results.sort((a, b) => b.score - a.score || a.order - b.order);
   const counts = {};
-  return results.map(({ palette }) => {
+  return pickDiverse(results, 5).map(({ palette }) => {
     counts[palette.name] = (counts[palette.name] ?? 0) + 1;
     return { ...palette, name: `${palette.name} ${counts[palette.name]}` };
   });
