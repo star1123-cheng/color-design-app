@@ -23,6 +23,13 @@ export function renderGradients(panel, palette, sel, minText, { onApply, onRemov
   const list = gradientSuggestions(palette.colors, { min: minText, dir: sel.dir });
   const chosen = pickGradients(palette.colors, sel.list, minText);
   const here = GRADIENT_TARGETS[sel.target].label;
+  // 2026-10-07 使用者決定：「用在哪裡」改成下拉式選單（與元件配色相同），已選用的位置標出漸層名稱
+  const targetSelect = h('select', { class: 'part-select', id: 'grad-target-select', on: { change: () => onTarget(targetSelect.value) } },
+    Object.entries(GRADIENT_TARGETS).map(([k, o]) => {
+      const used = chosen.find((x) => x.target === k);
+      return h('option', { value: k, title: o.desc }, `${o.label}${used ? `（已選用：${used.name}）` : ''}`);
+    }));
+  targetSelect.value = sel.target;
   const item = (g) => {
     const on = chosen.some((x) => x.key === g.key && x.target === sel.target);
     const elsewhere = chosen.filter((x) => x.key === g.key && x.target !== sel.target).map((x) => GRADIENT_TARGETS[x.target].label);
@@ -56,7 +63,7 @@ export function renderGradients(panel, palette, sel, minText, { onApply, onRemov
     h('div', { class: 'typo-head' },
       h('h3', {}, '漸層搭配建議'),
       h('span', { class: 'mono-note' }, `${list.length} 種`)),
-    h('p', { class: 'hint' }, '用目前的配色組成漸層。先選「用在哪裡」和「方向」，再按「選用這個漸層」，上面的預覽會跟著變，匯出與複製給 AI 也會一起帶上。換一個「用在哪裡」再選，就能同時使用多個漸層（每個位置一個）。'),
+    h('p', { class: 'hint' }, '用目前的配色組成漸層。先從「用在哪裡」選一個位置、再選「方向」，按「選用這個漸層」，上面的預覽會跟著變，匯出與複製給 AI 也會一起帶上。切換到其他位置再選，就能讓每個位置各用自己喜歡的漸層。'),
     chosen.length ? h('div', { class: 'grad-chosen' },
       h('span', { class: 'grad-opt-label' }, `已選用 ${chosen.length} 個漸層`),
       h('ul', { class: 'part-list' }, chosen.map((x) => h('li', {},
@@ -66,7 +73,7 @@ export function renderGradients(panel, palette, sel, minText, { onApply, onRemov
         },
         h('span', { class: 'fav-grad-bar', 'data-user-color': true, 'aria-hidden': 'true', style: { background: x.css } }),
         `${GRADIENT_TARGETS[x.target].label}：${x.name}`, icon('close')))))) : null,
-    h('div', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '用在哪裡'), seg('漸層用在哪裡', GRADIENT_TARGETS, sel.target, onTarget)),
+    h('label', { class: 'grad-opt part-opt' }, h('span', { class: 'grad-opt-label' }, '用在哪裡'), targetSelect),
     h('div', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '方向'), seg('漸層方向', GRADIENT_DIRS, sel.dir, onDir)),
     h('ul', { class: 'grad-list' }, list.map(item)));
 }
