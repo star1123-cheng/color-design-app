@@ -111,7 +111,7 @@ function render() {
   // 2026-10-06 使用者決定：拿掉預覽下方的檢查清單
   const minText = minTextContrast(state.scene, state.projection);
   renderSimSwitch($('sim-chips'), $('sim-hint'), state.simulate, (simulate) => set({ ...state, simulate }));
-  const grad = S.gradientSelection(state);
+  const grad = S.gradientSelections(state);
   const part = partsFor(state.previewType).includes(state.customPart) ? state.customPart : 'title';
   renderPreview($('stage'), palette, state.previewType, $('ratio-wide'),
     { simulate: state.simulate, gradient: grad, minText, scale: S.typographyScale(state), custom: state.custom, picked: part });
@@ -120,13 +120,15 @@ function render() {
     onSet: (p, v) => set(S.setPartColor(state, p, v)),
     onReset: () => { set(S.resetCustom(state)); toast('元件配色已全部回到預設'); },
   });
-  renderGradients($('gradient-panel'), palette, grad, minText, {
-    onApply: (gradient) => {
-      set({ ...state, gradient });
-      if (gradient) $('stage').scrollIntoView({ block: 'center' });
+  renderGradients($('gradient-panel'), palette, { list: grad, target: state.gradientTarget, dir: state.gradientDir }, minText, {
+    onApply: (key) => {
+      const next = S.toggleGradient(state, key);
+      set(next);
+      if (S.gradientAt(next)) $('stage').scrollIntoView({ block: 'center' });
     },
-    onTarget: (gradientTarget) => set({ ...state, gradientTarget }),
-    onDir: (gradientDir) => set({ ...state, gradientDir }),
+    onRemove: (target) => set(S.removeGradient(state, target)),
+    onTarget: (target) => set(S.setGradientTarget(state, target)),
+    onDir: (dir) => set(S.setGradientDir(state, dir)),
   });
   renderTypography($('typo-panel'), state, {
     onAdjust: (key, delta) => set(S.adjustTypography(state, key, delta)),
@@ -135,7 +137,7 @@ function render() {
   renderShareCard($('share-panel'), palette);
 
   renderRoles($('role-list'), palette, [$('copy-all-top')]);
-  renderExport($('export-panel'), palette, { ...state, gradient: grad, custom: state.custom }, {
+  renderExport($('export-panel'), palette, { ...state, gradients: grad, custom: state.custom }, {
     onFormat: (format) => set({ ...state, format }),
     onAiFormat: (aiFormat) => set({ ...state, aiFormat }),
   });

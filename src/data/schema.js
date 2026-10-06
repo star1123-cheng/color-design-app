@@ -66,10 +66,13 @@ export function validatePalette(p) {
   }
 
   // 選定的漸層（可省略，2026-10-06 使用者新增）：只存 key、用途、方向，色碼由五色重算
+  // 2026-10-07 起可同時多個：也接受陣列（1 到 4 個，每個用途最多一個）
   if (p.gradient !== undefined) {
-    const g = p.gradient;
-    if (!isObj(g) || !GRADIENT_KEYS.includes(g.key) || !Object.hasOwn(GRADIENT_TARGETS, g.target ?? '') || !Object.hasOwn(GRADIENT_DIRS, g.dir ?? '')) {
-      errors.push('gradient 必須含正確的 key、target、dir');
+    const okOne = (g) => isObj(g) && GRADIENT_KEYS.includes(g.key) && Object.hasOwn(GRADIENT_TARGETS, g.target ?? '') && Object.hasOwn(GRADIENT_DIRS, g.dir ?? '');
+    const list = Array.isArray(p.gradient) ? p.gradient : [p.gradient];
+    const targets = new Set(list.map((g) => g?.target));
+    if (!list.length || list.length > Object.keys(GRADIENT_TARGETS).length || !list.every(okOne) || targets.size !== list.length) {
+      errors.push('gradient 必須含正確的 key、target、dir（多個時每個用途最多一個）');
     }
   }
 

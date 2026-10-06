@@ -2,7 +2,7 @@
 // 另有「複製給 AI 簡報用」（YAML 設計規格｜完整提示詞）。2026-10-05 起不分模式，全部顯示。
 import { h, icon, mount } from './dom.js';
 import { copyText } from './copy.js';
-import { hexList, rgbList, cssVariables, cssOklch, slidesThemeText, selectedGradient } from '../export/formats.js';
+import { hexList, rgbList, cssVariables, cssOklch, slidesThemeText, selectedGradients } from '../export/formats.js';
 import { toYaml, toFullPrompt } from '../export/ai-prompt.js';
 
 export const FORMATS = {
@@ -22,14 +22,14 @@ const seg = (label, options, current, onPick) => h('div', { class: 'chips chips-
 /**
  * @param {HTMLElement} panel
  * @param {object} palette SPEC 3.1 配色（含字級微調）
- * @param {{ format: string, aiFormat: string, gradient?: { key: string|null, target: string, dir: string }, custom?: Record<string, string> }} st
- *   gradient：選定的漸層；custom：元件配色。兩者都會一起放進匯出內容
+ * @param {{ format: string, aiFormat: string, gradients?: { key: string, target: string, dir: string }[], custom?: Record<string, string> }} st
+ *   gradients：選用的漸層（可多個）；custom：元件配色。兩者都會一起放進匯出內容
  * @param {{ onFormat: (f: string) => void, onAiFormat: (f: string) => void }} handlers
  */
 export function renderExport(panel, palette, st, { onFormat, onAiFormat }) {
   const keys = Object.keys(FORMATS);
   const format = keys.includes(st.format) ? st.format : 'hex';
-  const g = selectedGradient(palette, st.gradient);
+  const g = selectedGradients(palette, st.gradients);
   const custom = st.custom ?? null;
   const text = FORMATS[format].make(palette, g, custom);
   const ai = AI[st.aiFormat] ? st.aiFormat : 'yaml';
@@ -38,7 +38,7 @@ export function renderExport(panel, palette, st, { onFormat, onAiFormat }) {
   mount(panel,
     h('div', { class: 'ratio-head' }, h('h3', {}, '匯出'), h('span', { class: 'mono-note' }, FORMATS[format].label)),
     h('p', { class: 'hint' }, [
-      g ? `已附上選用的漸層「${g.name}」。` : '在「漸層搭配建議」選用漸層後，匯出內容會一起附上。',
+      g.length ? `已附上選用的漸層「${g.map((x) => x.name).join('」「')}」。` :'在「漸層搭配建議」選用漸層後，匯出內容會一起附上。',
       nParts ? `已附上 ${nParts} 個元件配色。` : '',
     ].join('')),
     seg('匯出格式', keys.map((k) => [k, FORMATS[k].label]), format, onFormat),
