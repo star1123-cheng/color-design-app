@@ -3,8 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { WEB_PALETTES, WEB_SERIES } from '../src/data/web-palettes.js';
-import { pieCss, seedColor, palettesOf, ALL_SERIES } from '../src/ui/web-palettes.js';
-import { hexToOklch } from '../src/color/oklch.js';
+import { pieCss, webToPalette, palettesOf, ALL_SERIES } from '../src/ui/web-palettes.js';
+import { contrastRatio } from '../src/color/contrast.js';
+import { validatePalette } from '../src/data/schema.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
@@ -35,15 +36,32 @@ test('切分圓形：每個顏色等分，角度接起來是 360°', () => {
     'conic-gradient(#111111 0deg 120deg, #222222 120deg 240deg, #333333 240deg 360deg)');
 });
 
-test('用這組推薦：取彩度最高的顏色；整組灰白時取明度接近中間的', () => {
+test('用這組推薦：整組套用，五個角色都是合法配色，主色、輔色、點綴色只用這組的顏色', () => {
   for (const p of WEB_PALETTES) {
-    const seed = seedColor(p.colors);
-    assert.ok(p.colors.includes(seed), p.id);
+    const pal = webToPalette(p);
+    const own = p.colors.map((c) => c.hex);
+    assert.equal(validatePalette(pal).valid, true, `${p.id} ${validatePalette(pal).errors}`);
+    assert.equal(pal.name, p.name);
+    for (const r of ['primary', 'secondary', 'accent']) assert.ok(own.includes(pal.colors[r].hex), `${p.id} ${r}`);
+    assert.ok(contrastRatio(pal.colors.text.hex, pal.colors.background.hex) >= 4.5, `${p.id} 字色對比`);
   }
-  assert.equal(seedColor([{ hex: '#F7F2EE' }, { hex: '#E7688B' }, { hex: '#EEEEEE' }]).hex, '#E7688B');
-  const gray = seedColor([{ hex: '#FFFFFF' }, { hex: '#8A8A8A' }, { hex: '#111111' }]);
-  assert.equal(gray.hex, '#8A8A8A');
-  assert.ok(hexToOklch(gray.hex)[1] < 0.03);
+});
+
+test('用這組推薦：有夠淡的顏色就當底色、夠深的就當字色，不另外補色', () => {
+  const pal = webToPalette({ id: 'T', name: '測試', colors: [{ name: '白', hex: '#F7F2EE' }, { name: '紅', hex: '#E7688B' }, { name: '青', hex: '#3E5968' }] });
+  assert.equal(pal.colors.background.hex, '#F7F2EE');
+  assert.equal(pal.colors.text.hex, '#3E5968');
+  assert.equal(pal.colors.primary.hex, '#E7688B');
+  assert.ok(!pal.checks.warnings.some((w) => w.includes('補色')));
+});
+
+test('用這組推薦：兩色鮮豔配色補底色與字色，點綴色沿用輔色並註明', () => {
+  const pal = webToPalette(WEB_PALETTES.find((p) => p.id === 'W-001'));
+  assert.equal(pal.colors.primary.hex, '#E7688B');
+  assert.equal(pal.colors.secondary.hex, '#86CBB0');
+  assert.equal(pal.colors.accent.hex, '#86CBB0');
+  assert.ok(pal.checks.warnings.some((w) => w.includes('底色') && w.includes('字色')));
+  assert.ok(pal.checks.warnings.includes('點綴色沿用輔色'));
 });
 
 test('系列篩選：全部等於總數，各系列加總也等於總數', () => {

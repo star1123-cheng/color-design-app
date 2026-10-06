@@ -21,6 +21,12 @@
   --surface: #FCFAF6;
   --hair: #D5D0C8;
 
+  /* 標題字樣專用色（取自 Canva「色境Logo」，只用在 .brand） */
+  --logo-blue: #004AAD;
+  --logo-violet: #7A3FE0;
+  --logo-line-a: #8C52FF;
+  --logo-line-b: #5CE1E6;
+
   /* 字體：不載入外部字型（SPEC 第 2、7 節），有安裝就用，否則退回系統字體 */
   --font-serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
   --font-sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
@@ -75,9 +81,32 @@ button, input[type="color"], input[type="text"], input[type="range"], a.navlink 
   padding: 16px var(--gutter) 8px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
-.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.brand h1 { font-size: 26px; line-height: 1.2; white-space: nowrap; }
-.brand p { margin: 0; color: var(--ink-2); font-size: 13px; letter-spacing: 0.08em; white-space: nowrap; }
+/* 標題字樣比照 Canva「色境Logo」：大字「色境」在左，右側上排粗體漸層標語、下排斜體英文名＋紫到青漸層底線。
+   字級比例 色境 : ColorRealm : 標語 ≈ 3 : 2 : 1，以 --brand-size 統一縮放。 */
+.brand {
+  --brand-size: 34px;
+  display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto;
+  align-items: start; column-gap: 0.12em; min-width: 0;
+  font-size: var(--brand-size);
+}
+/* 「色境」與標語「從容」頂端對齊：兩者都用 line-height: 1 貼齊格線上緣，h1 再微調字身留白的差距 */
+.brand h1, .brand .brand-mark { grid-row: 1 / 3; align-self: start; margin-top: -0.085em; font-size: 1em; font-weight: 400; line-height: 1; color: var(--ink); white-space: nowrap; }
+.brand p { margin: 0; white-space: nowrap; }
+.brand-tagline {
+  grid-column: 2; justify-self: center;
+  font-family: var(--font-sans); font-weight: 700; font-size: 0.334em; line-height: 1;
+  color: var(--logo-blue);
+  background: linear-gradient(90deg, var(--logo-blue), var(--logo-violet));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.brand-en {
+  grid-column: 2;
+  font-family: 'Lora', 'Georgia', 'Times New Roman', serif; font-style: italic;
+  font-size: 0.67em; line-height: 1.15; color: var(--ink);
+  padding: 0 0.04em 0.06em;
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--logo-line-a), var(--logo-line-b)) 1;
+}
 .topbar-actions { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
 .desktop-only { display: none !important; }
 
@@ -455,10 +484,12 @@ input[type="range"]::-moz-range-thumb {
 .grad-opt { display: grid; gap: 6px; margin-top: 12px; }
 /* 元件配色（2026-10-06 使用者新增） */
 .part-select { min-height: var(--tap); padding: 0 14px; border-radius: 999px; border: 1px solid var(--hair); background: var(--cream); color: var(--ink); font: inherit; font-size: 15px; }
-.part-chips { margin-top: 10px; }
+.part-opt { gap: 10px; margin-top: 18px; }
+.chips.part-chips { margin-top: 16px; row-gap: 10px; }
 .part-chip { display: inline-flex; align-items: center; gap: 8px; min-height: var(--tap); }
 .part-dot { width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1px var(--hair); flex: 0 0 auto; }
-.part-hex { margin-top: 12px; }
+.part-hex { margin-top: 24px; }
+.part-hex .field-row { margin-top: 4px; }
 .part-note { margin: 8px 0 0; }
 .part-summary { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hair); }
 .part-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -632,7 +663,8 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
   body { padding-bottom: 40px; }
   .topbar { border-bottom: 1px solid var(--hair); }
   .topbar-inner { padding: 18px 40px; }
-  .brand h1 { font-size: 29px; }
+  .brand { --brand-size: 40px; }
+  .brand-en { border-bottom-width: 3px; }
   .desktop-only { display: inline-flex !important; }
   .mono-note.desktop-only { display: inline !important; }
   .topbar-actions .btn { min-height: 48px; }
@@ -700,7 +732,37 @@ input[type="text"].fav-name { font-family: var(--font-sans); font-size: 15px; fo
   .watermark { bottom: 20px; right: 20px; }
 }
 
+/* ---------- 啟動畫面（Splash） ----------
+   時間軸：0.2 s 後字樣 Wipe Reveal（1.3 s，ease-in-out），停 0.4 s，整層 0.4 s 淡出，共約 2.3 s。
+   預設不顯示；安裝後的 App 或 html.splash-preview（?splash=1）才顯示。播完以 visibility: hidden 收起，不擋操作。 */
+.splash { display: none; }
+@media (display-mode: standalone) { .splash { display: grid; } }
+html.splash-preview .splash { display: grid; }
+.splash {
+  position: fixed; inset: 0; z-index: 1000;
+  place-items: center;
+  background: var(--cream); color: var(--ink);
+  animation: splash-out 0.4s ease-in-out 1.9s forwards;
+}
+/* 圖案維持在畫面正中央（與系統啟動畫面同位置，切換時不跳動），字樣掛在圖案下方 */
+.splash-inner { position: relative; }
+.splash-icon { width: min(44vw, 200px); height: auto; display: block; }
+.splash-c1 { fill: var(--mist); }
+.splash-c2 { fill: var(--sand); }
+.splash-c3 { fill: var(--mist-deep); }
+.brand.splash-logo {
+  --brand-size: 46px;
+  position: absolute; top: calc(100% + 28px); left: 50%; translate: -50% 0;
+  clip-path: inset(0 100% 0 0);
+  animation: splash-wipe 1.3s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
+}
+@keyframes splash-wipe { to { clip-path: inset(0 0 0 0); } }
+@keyframes splash-out { to { opacity: 0; visibility: hidden; } }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .toast, .switch-knob { transition: none; }
+  /* 減少動態：字樣直接出現，只保留短暫停留後淡出 */
+  .brand.splash-logo { animation: none; clip-path: none; }
+  .splash { animation-delay: 0.8s; }
 }

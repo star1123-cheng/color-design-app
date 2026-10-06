@@ -79,7 +79,7 @@ export function renderCustom(panel, palette, type, { custom, part }, minText, { 
       h('h3', {}, '元件配色'),
       h('span', { class: 'mono-note' }, entries.length ? `已自訂 ${entries.length} 個` : PREVIEW_LABELS[type])),
     h('p', { class: 'hint' }, '直接點上面預覽裡的元件，或從選單挑一個，再選顏色。可以用這組配色的顏色，也可以自訂任何顏色；會一起存進收藏與匯出。'),
-    h('label', { class: 'grad-opt' }, h('span', { class: 'grad-opt-label' }, '要調整的元件'), select),
+    h('label', { class: 'grad-opt part-opt' }, h('span', { class: 'grad-opt-label' }, '要調整的元件'), select),
     h('div', { class: 'chips chips-wrap part-chips', role: 'group', 'aria-label': `${PARTS[part].label}的顏色` },
       h('button', { type: 'button', class: 'chip', 'aria-pressed': String(!set), on: { click: () => onSet(part, null) } }, '預設'),
       ROLES.map(roleBtn)),
