@@ -7,7 +7,7 @@ import { renderCards } from './ui/cards.js';
 import { renderPreview } from './ui/preview.js';
 import { renderGradients } from './ui/gradient.js';
 import { renderCustom } from './ui/custom.js';
-import { renderWebPalettes, ALL_SERIES } from './ui/web-palettes.js';
+import { renderWebPalettes, webToPalette, ALL_SERIES } from './ui/web-palettes.js';
 import { PARTS, partsFor } from './data/parts.js';
 import { renderRoles } from './ui/roles.js';
 import { renderSceneBar, renderSimSwitch, renderTypography } from './ui/teacher.js';
@@ -225,10 +225,12 @@ let webSeries = ALL_SERIES;
 function renderWeb() {
   renderWebPalettes($('webpal-filter'), $('webpal-list'), $('webpal-count'), webSeries, {
     onSeries: (series) => { webSeries = series; renderWeb(); },
-    onUse: (color, p) => {
-      set(S.pickColor(state, color.hex), { recompute: true });
-      toast(`已用「${p.name}」的${color.name}當主色`);
-      goTo('pick', 'recs');
+    // 整組套用到預覽（2026-10-06 使用者決定）：與套用收藏相同，選色區同步成這組的主色，推薦卡片不選取
+    onUse: (p) => {
+      const palette = webToPalette(p, minTextContrast(state.scene, state.projection));
+      set(S.applyFavorite({ ...S.pickColor(state, palette.colors.primary.hex), fav: palette }, palette), { recompute: true, keepFav: true });
+      toast(`已把「${p.name}」整組套用到預覽`);
+      goTo('preview');
     },
   });
 }
