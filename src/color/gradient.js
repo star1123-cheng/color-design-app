@@ -3,6 +3,7 @@
 // 淺色型：淺端 L ≥ 0.96、深端 0.80–0.88、最深階彩度最高
 import { quantize } from './gamut.js';
 import { contrastRatio } from './contrast.js';
+import { PARTS, PREVIEW_LABELS } from '../data/parts.js';
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -58,13 +59,32 @@ export const GRADIENT_DIRS = {
   radial: { label: '放射', desc: '從左上角往外擴散', css: 'radial-gradient(circle at top left' },
 };
 
-/** 漸層用在哪個元件（2026-10-06 使用者新增：可自選）；hero 為預設 */
-export const GRADIENT_TARGETS = {
-  background: { label: '整頁背景', desc: '整頁或整張投影片的背景' },
-  hero: { label: '橫幅／主視覺', desc: '標題橫幅、網頁主視覺區塊' },
-  button: { label: '按鈕與標籤', desc: '按鈕、題號、表頭等小面積重點' },
-  deco: { label: '裝飾圖形', desc: '圓形、色塊等裝飾' },
-};
+/**
+ * 漸層用在哪個元件（2026-10-08 使用者決定：與元件配色相同，可細到每個元件）。
+ * 沿用 src/data/parts.js 的元件；框線類（border）畫不出好看的圓角漸層框，不列入。
+ * kind：page 整頁背景、text 漸層文字、fill 色塊、tint 卡片
+ */
+export const GRADIENT_TARGETS = Object.fromEntries(Object.entries(PARTS)
+  .filter(([, p]) => p.kind !== 'border')
+  .map(([k, p]) => [k, { label: p.label, desc: `出現在：${p.types.map((t) => PREVIEW_LABELS[t]).join('、')}`, kind: p.kind, types: p.types }]));
+
+/** 預設用途：標題（每種預覽都有） */
+export const DEFAULT_GRADIENT_TARGET = 'title';
+
+/** 某種預覽可以套漸層的元件（依 PARTS 順序） */
+export const gradientTargetsFor = (type) => Object.keys(GRADIENT_TARGETS).filter((k) => GRADIENT_TARGETS[k].types.includes(type));
+
+/**
+ * 舊版（2026-10-06～07）的 4 個大用途換成元件：橫幅／主視覺 → 標題、裝飾圖形 → 大圓與裝飾大圓。
+ * 整頁背景（background）、按鈕（button）與元件同名，直接沿用。
+ */
+const LEGACY_TARGETS = { hero: ['title'], deco: ['decoBig', 'blob'] };
+
+/** 用途是否正確（含舊版用途，收藏驗證用） */
+export const isGradientTarget = (t) => typeof t === 'string' && (Object.hasOwn(GRADIENT_TARGETS, t) || Object.hasOwn(LEGACY_TARGETS, t));
+
+/** 用途換成元件清單；不認得時回傳空陣列 */
+const targetsOf = (t) => (typeof t !== 'string' ? [] : Object.hasOwn(LEGACY_TARGETS, t) ? LEGACY_TARGETS[t] : Object.hasOwn(GRADIENT_TARGETS, t) ? [t] : []);
 
 /**
  * 產生 CSS 語法，例如 linear-gradient(135deg, #AAAAAA 0%, #BBBBBB 100%)。
@@ -131,10 +151,10 @@ export function gradientSuggestions(colors, { min = 4.5, dir = 'diag' } = {}) {
  * @param {Record<string, {hex: string, oklch: number[]}>} colors
  * @param {{ key: string|null, target?: string, dir?: string, min?: number }} sel
  */
-export function pickGradient(colors, { key, target = 'hero', dir = 'diag', min = 4.5 }) {
+export function pickGradient(colors, { key, target = DEFAULT_GRADIENT_TARGET, dir = 'diag', min = 4.5 }) {
   if (!key) return null;
   const d = GRADIENT_DIRS[dir] ? dir : 'diag';
-  const t = GRADIENT_TARGETS[target] ? target : 'hero';
+  const t = targetsOf(target)[0] ?? DEFAULT_GRADIENT_TARGET;
   const g = gradientSuggestions(colors, { min, dir: d }).find((x) => x.key === key);
   return g ? { ...g, dir: d, target: t } : null;
 }
@@ -142,14 +162,16 @@ export function pickGradient(colors, { key, target = 'hero', dir = 'diag', min =
 /**
  * 同時選用多個漸層（2026-10-07 使用者新增）：每個用途（GRADIENT_TARGETS）最多一個。
  * 接受舊格式（單一物件）或新格式（陣列），回傳依用途順序排好、去掉不正確項目的陣列；同一用途重複時以後面的為準。
+ * 舊版的大用途（hero、deco）會換成對應的元件。
  * @param {unknown} v null、{ key, target, dir } 或其陣列
  * @returns {{ key: string, target: string, dir: string }[]}
  */
 export function gradientList(v) {
   const byTarget = {};
   for (const g of Array.isArray(v) ? v : v ? [v] : []) {
-    if (!g || !GRADIENT_KEYS.includes(g.key) || !Object.hasOwn(GRADIENT_TARGETS, g.target ?? '')) continue;
-    byTarget[g.target] = { key: g.key, target: g.target, dir: Object.hasOwn(GRADIENT_DIRS, g.dir ?? '') ? g.dir : 'diag' };
+    if (!g || !GRADIENT_KEYS.includes(g.key)) continue;
+    const dir = Object.hasOwn(GRADIENT_DIRS, g.dir ?? '') ? g.dir : 'diag';
+    for (const t of targetsOf(g.target)) byTarget[t] = { key: g.key, target: t, dir };
   }
   return Object.keys(GRADIENT_TARGETS).filter((t) => byTarget[t]).map((t) => byTarget[t]);
 }

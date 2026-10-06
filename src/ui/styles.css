@@ -407,7 +407,6 @@ input[type="range"]::-moz-range-thumb {
 .web-links { display: flex; gap: 3cqw; opacity: 0.78; }
 .web-cta { padding: 0.8cqw 2.6cqw; border-radius: 999px; font-weight: 700; font-size: 0.9em; }
 .web-hero { display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 3cqw; margin: 3.5cqw 4.5cqw 0; padding: 3cqw 0; border-radius: var(--r-md); }
-.web-hero.is-grad { padding: 4cqw; }
 .web-tag { display: inline-block; padding: 0.4cqw 2cqw; border: 1.5px solid; border-radius: 999px; font-size: 0.85em; font-weight: 700; letter-spacing: 0.08em; }
 .web-title { font-family: var(--font-serif); font-weight: 700; font-size: calc(clamp(18px, 5.6cqw, 40px) * var(--ts, 1)); line-height: 1.2; margin: 1.6cqw 0 1.2cqw; }
 .web-lead { margin: 0; opacity: 0.82; max-width: 30em; }
@@ -431,7 +430,6 @@ input[type="range"]::-moz-range-thumb {
 .web-card-title { font-weight: 700; margin-top: 0.4cqw; }
 
 .sheet { position: relative; padding: 5cqw 6cqw; font-size: calc(clamp(12px, 2.8cqw, 16px) * var(--bs, 1)); }
-.sheet-band { position: absolute; inset: 0 0 auto; height: 1.6cqw; min-height: 6px; }
 .sheet-title { font-family: var(--font-serif); font-weight: 700; font-size: calc(clamp(18px, 5cqw, 36px) * var(--ts, 1)); line-height: 1.3; }
 .sheet-meta { display: flex; gap: 6cqw; margin: 2cqw 0 3cqw; padding-bottom: 1.5cqw; border-bottom: 2px solid; }
 .sheet ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2cqw; }
@@ -501,14 +499,6 @@ input[type="range"]::-moz-range-thumb {
 .fav-grad { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .fav-grad-bar { width: 48px; height: 14px; border-radius: 999px; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--hair); }
 .grad-opt-label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
-/* 預覽中的漸層元件（2026-10-06 使用者新增） */
-.grad-banner { padding: 2.4cqw 3cqw; border-radius: var(--r-sm); margin-bottom: 2.4cqw; }
-.grad-banner .slide-title, .grad-banner .sheet-title { margin-bottom: 0; }
-.grad-plate { display: inline-block; padding: 1cqw 2cqw; border-radius: var(--r-sm); }
-.web-copy.grad-plate { display: block; padding: 2cqw; }
-.slide-kicker.is-pill { display: inline-block; padding: 0.4cqw 1.8cqw; border-radius: 999px; opacity: 1; }
-.slide-no.is-pill { padding: 0.4cqw 1.8cqw; border-radius: 999px; opacity: 1; }
-.sheet-corner { position: absolute; top: -6cqw; right: -6cqw; width: 20cqw; height: 20cqw; border-radius: 50%; opacity: 0.85; pointer-events: none; }
 .grad-actions .btn[aria-pressed="true"] {
   background: var(--mist-pale);
   color: var(--mist-ink);

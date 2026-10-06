@@ -6,6 +6,7 @@ import { initPicker, renderPicker } from './ui/picker.js';
 import { renderCards } from './ui/cards.js';
 import { renderPreview } from './ui/preview.js';
 import { renderGradients } from './ui/gradient.js';
+import { gradientTargetsFor, DEFAULT_GRADIENT_TARGET } from './color/gradient.js';
 import { renderCustom } from './ui/custom.js';
 import { renderWebPalettes, webToPalette, ALL_SERIES } from './ui/web-palettes.js';
 import { PARTS, partsFor } from './data/parts.js';
@@ -120,15 +121,17 @@ function render() {
     onSet: (p, v) => set(S.setPartColor(state, p, v)),
     onReset: () => { set(S.resetCustom(state)); toast('元件配色已全部回到預設'); },
   });
-  renderGradients($('gradient-panel'), palette, { list: grad, target: state.gradientTarget, dir: state.gradientDir }, minText, {
+  // 漸層的元件不在目前的預覽時，改成設定標題（與元件配色相同的做法）
+  const gst = gradientTargetsFor(state.previewType).includes(state.gradientTarget) ? state : S.setGradientTarget(state, DEFAULT_GRADIENT_TARGET);
+  renderGradients($('gradient-panel'), palette, { list: grad, target: gst.gradientTarget, dir: gst.gradientDir, type: state.previewType }, minText, {
     onApply: (key) => {
-      const next = S.toggleGradient(state, key);
+      const next = S.toggleGradient(gst, key);
       set(next);
       if (S.gradientAt(next)) $('stage').scrollIntoView({ block: 'center' });
     },
     onRemove: (target) => set(S.removeGradient(state, target)),
     onTarget: (target) => set(S.setGradientTarget(state, target)),
-    onDir: (dir) => set(S.setGradientDir(state, dir)),
+    onDir: (dir) => set(S.setGradientDir(gst, dir)),
   });
   renderTypography($('typo-panel'), state, {
     onAdjust: (key, delta) => set(S.adjustTypography(state, key, delta)),
