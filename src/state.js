@@ -4,7 +4,7 @@
 import { hexToOklch, normalizeHex } from './color/oklch.js';
 import { SCENES, SCENE_PREVIEW, STYLES, clampTypography, typographyLimits } from './data/presets.js';
 import { PARTS, isPartValue } from './data/parts.js';
-import { gradientList, GRADIENT_KEYS, GRADIENT_TARGETS, GRADIENT_DIRS } from './color/gradient.js';
+import { gradientList, GRADIENT_KEYS, GRADIENT_TARGETS, GRADIENT_DIRS, DEFAULT_GRADIENT_TARGET } from './color/gradient.js';
 
 export const DEFAULT_HEX = '#78A5CE'; // SPEC 第 9 節示範色
 
@@ -18,8 +18,8 @@ export function createState(overrides = {}) {
     projection: false,        // 投影模式
     typo: null,               // 字級微調（null 表示用場景預設值）
     style: null,              // 風格（null 表示不限）
-    gradients: [],            // 選用的漸層 [{ key, target, dir }]，每個用途最多一個，會套用到預覽並放進匯出
-    gradientTarget: 'hero',   // 正在設定的用途：background、hero、button、deco
+    gradients: [],            // 選用的漸層 [{ key, target, dir }]，每個元件最多一個，會套用到預覽並放進匯出
+    gradientTarget: DEFAULT_GRADIENT_TARGET, // 正在設定的元件（見 GRADIENT_TARGETS）
     gradientDir: 'diag',      // 正在設定的方向：diag、h、v、radial
     custom: {},               // 元件配色：元件 → 角色名稱或 HEX（見 src/data/parts.js）
     customPart: 'title',      // 正在調整的元件

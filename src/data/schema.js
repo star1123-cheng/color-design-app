@@ -1,6 +1,6 @@
 // 內部資料格式（SPEC 3.1，schemaVersion 1）與驗證
 import { SCENE_KEYS } from './presets.js';
-import { GRADIENT_KEYS, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+import { GRADIENT_KEYS, GRADIENT_DIRS, isGradientTarget } from '../color/gradient.js';
 import { isCustomMap } from './parts.js';
 
 export const SCHEMA_VERSION = 1;
@@ -66,12 +66,13 @@ export function validatePalette(p) {
   }
 
   // 選定的漸層（可省略，2026-10-06 使用者新增）：只存 key、用途、方向，色碼由五色重算
-  // 2026-10-07 起可同時多個：也接受陣列（1 到 4 個，每個用途最多一個）
+  // 2026-10-07 起可同時多個：也接受陣列（至少 1 個，每個用途最多一個）
+  // 2026-10-08 起用途細到每個元件；舊版的大用途（hero、deco）仍可讀入
   if (p.gradient !== undefined) {
-    const okOne = (g) => isObj(g) && GRADIENT_KEYS.includes(g.key) && Object.hasOwn(GRADIENT_TARGETS, g.target ?? '') && Object.hasOwn(GRADIENT_DIRS, g.dir ?? '');
+    const okOne = (g) => isObj(g) && GRADIENT_KEYS.includes(g.key) && isGradientTarget(g.target) && Object.hasOwn(GRADIENT_DIRS, g.dir ?? '');
     const list = Array.isArray(p.gradient) ? p.gradient : [p.gradient];
     const targets = new Set(list.map((g) => g?.target));
-    if (!list.length || list.length > Object.keys(GRADIENT_TARGETS).length || !list.every(okOne) || targets.size !== list.length) {
+    if (!list.length || !list.every(okOne) || targets.size !== list.length) {
       errors.push('gradient 必須含正確的 key、target、dir（多個時每個用途最多一個）');
     }
   }

@@ -11,7 +11,7 @@ import { addFavorite, loadFavorites, STORAGE_KEY } from '../src/data/favorites.j
 import { validatePalette } from '../src/data/schema.js';
 
 /** 狀態：只選用一個漸層 */
-const withGrad = (key, target = 'hero', dir = 'diag') => ({ ...createState(), gradients: [{ key, target, dir }] });
+const withGrad = (key, target = 'title', dir = 'diag') => ({ ...createState(), gradients: [{ key, target, dir }] });
 
 const HEXES = ['#78A5CE', '#E07A5F', '#2F6B4F', '#F2C94C', '#7A5C99', '#74AECF'];
 
@@ -45,7 +45,7 @@ test('pickGradient：未選回傳 null；不認得的用途與方向改用預設
   assert.equal(pickGradient(p.colors, { key: null }), null);
   assert.equal(pickGradient(p.colors, { key: 'nope' }), null);
   const g = pickGradient(p.colors, { key: 'main', target: 'xx', dir: 'yy' });
-  assert.equal(g.target, 'hero');
+  assert.equal(g.target, 'title');
   assert.equal(g.dir, 'diag');
   for (const t of Object.keys(GRADIENT_TARGETS)) for (const d of Object.keys(GRADIENT_DIRS)) {
     const x = pickGradient(p.colors, { key: 'analog', target: t, dir: d });
@@ -54,10 +54,10 @@ test('pickGradient：未選回傳 null；不認得的用途與方向改用預設
   }
 });
 
-test('狀態預設：沒有選漸層、用在橫幅、斜角', () => {
+test('狀態預設：沒有選漸層、用在標題、斜角', () => {
   const st = createState();
   assert.deepEqual(gradientSelections(st), []);
-  assert.equal(st.gradientTarget, 'hero');
+  assert.equal(st.gradientTarget, 'title');
   assert.equal(st.gradientDir, 'diag');
 });
 
@@ -72,18 +72,18 @@ test('匯出：沒選漸層時內容與舊版相同；選了之後每種格式�
   for (const make of [hexList, cssVariables, cssOklch, slidesThemeText]) {
     const out = make(p, g);
     assert.ok(hexes.every((h) => out.includes(h)), make.name);
-    assert.ok(out.includes('整頁背景'), make.name);
+    assert.ok(out.includes('用在背景'), make.name);
   }
   assert.ok(rgbList(p, g).includes('漸層（柔和同色'));
   assert.ok(cssVariables(p, g).includes(`--gradient-soft: ${g.css};`));
   assert.ok(cssVariables(p, g).trimEnd().endsWith('}'));
 
   const y = toYaml(p, g);
-  assert.match(y, /\ngradient:\n {2}name: "柔和同色"\n {2}apply_to: "整頁背景"\n {2}direction: "由上到下"\n {2}stops:\n/);
+  assert.match(y, /\ngradient:\n {2}name: "柔和同色"\n {2}apply_to: "背景"\n {2}direction: "由上到下"\n {2}stops:\n/);
   for (const h of hexes) assert.ok(y.includes(`    - "${h}"`));
   assert.ok(!/\t/.test(y));
   const full = toFullPrompt(p, g);
-  assert.ok(full.includes('漸層只用在「整頁背景」'));
+  assert.ok(full.includes('漸層只用在「背景」'));
   assert.ok(full.includes('gradient:'));
 });
 
@@ -122,12 +122,12 @@ test('收藏：同一組五色換了漸層，更新原本那筆，不重複新�
   const base = withGrad('soft');
   assert.equal(addFavorite(paletteForFavorite(p, base), s).ok, true);
   assert.match(addFavorite(paletteForFavorite(p, base), s).message, /已經在收藏/);
-  const r = addFavorite(paletteForFavorite(p, withGrad('deep', 'hero', 'h')), s);
+  const r = addFavorite(paletteForFavorite(p, withGrad('deep', 'title', 'h')), s);
   assert.equal(r.ok, true);
   assert.match(r.message, /更新/);
   const list = loadFavorites(s).palettes;
   assert.equal(list.length, 1);
-  assert.deepEqual(list[0].gradient, { key: 'deep', target: 'hero', dir: 'h' });
+  assert.deepEqual(list[0].gradient, { key: 'deep', target: 'title', dir: 'h' });
   assert.match(addFavorite(paletteForFavorite(p, createState()), s).message, /更新/);
   assert.ok(!('gradient' in loadFavorites(s).palettes[0]));
 });

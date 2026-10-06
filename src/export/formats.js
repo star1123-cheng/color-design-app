@@ -48,7 +48,9 @@ const customSection = (p, custom, fmt) => {
 const listWithGradient = (lines, g, fmt) => [lines,
   ...asGradients(g).map((x) => `漸層（${gradientNote(x)}）\n${x.stops.map(fmt).join(' → ')}`)].join('\n\n');
 /** CSS 變數名稱：同一種漸層用在多個位置時，加上用途區分 */
-const gradVar = (x, list) => (list.filter((y) => y.key === x.key).length > 1 ? `--gradient-${x.key}-${x.target}` : `--gradient-${x.key}`);
+// 同一種漸層用在多個元件時，變數名稱加上元件（decoBig → deco-big）
+const gradVar = (x, list) => (list.filter((y) => y.key === x.key).length > 1
+  ? `--gradient-${x.key}-${x.target.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)}` : `--gradient-${x.key}`);
 const cssWithGradient = (vars, g, p, custom) => {
   const parts = customEntries(custom, p.colors);
   const grads = asGradients(g);
