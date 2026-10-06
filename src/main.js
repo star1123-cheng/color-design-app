@@ -274,6 +274,12 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.register('./sw.js').catch(() => { /* 註冊失敗不影響一般使用 */ });
 }
 
+// 啟動畫面：播完（淡出結束）就移除；網址加上 ?splash=1 可在一般瀏覽器預覽
+const splash = $('splash');
+if (new URLSearchParams(location.search).has('splash')) document.documentElement.classList.add('splash-preview');
+splash?.addEventListener('animationend', (e) => { if (e.target === splash) splash.remove(); });
+if (splash && getComputedStyle(splash).display === 'none') splash.remove();
+
 // 介面自我檢查：網址加上 ?audit=1 時，量測文字對比度、觸控目標、截斷與橫向捲軸（結果印在 Console）
 if (new URLSearchParams(location.search).has('audit')) {
   import('./ui/audit-dom.js').then((m) => m.runDomAudit());
