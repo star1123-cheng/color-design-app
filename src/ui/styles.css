@@ -482,6 +482,7 @@ input[type="range"]::-moz-range-thumb {
 .grad-hexes { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); margin: 2px 0; overflow-wrap: anywhere; }
 .grad-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
 .grad-opt { display: grid; gap: 6px; margin-top: 12px; }
+.grad-chosen { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hair); }
 /* 元件配色（2026-10-06 使用者新增） */
 .part-select { min-height: var(--tap); padding: 0 14px; border-radius: 999px; border: 1px solid var(--hair); background: var(--cream); color: var(--ink); font: inherit; font-size: 15px; }
 .part-opt { gap: 10px; margin-top: 18px; }

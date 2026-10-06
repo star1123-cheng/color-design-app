@@ -3,6 +3,7 @@
 // 資料損毀、不認得的 schemaVersion 一律跳過並回報，不讓程式當機。
 import { loadPalettes, validatePalette } from './schema.js';
 import { makeId } from '../color/palette.js';
+import { gradientList } from '../color/gradient.js';
 
 export const STORAGE_KEY = 'color-design-app:favorites';
 export const MAX_FAVORITES = 50; // （假設）上限，避免 localStorage 爆量
@@ -45,18 +46,18 @@ function write(s, list) {
 const signature = (p) => ['primary', 'secondary', 'background', 'text', 'accent'].map((r) => p.colors[r].hex).join('');
 /** 漸層與元件配色的設定（比較是否相同用） */
 const extrasSig = (p) => JSON.stringify([
-  p.gradient ? [p.gradient.key, p.gradient.target, p.gradient.dir] : null,
+  gradientList(p.gradient).map((g) => [g.key, g.target, g.dir]),
   Object.entries(p.custom ?? {}).sort(([a], [b]) => (a < b ? -1 : 1)),
 ]);
 
 /** 把 src 的漸層與元件配色設定套到 p（src 沒有的欄位就移除） */
 function withExtras(p, src) {
   const { gradient: _g, custom: _c, ...rest } = p;
-  const g = src.gradient;
+  const g = gradientList(src.gradient); // 一個時存單一物件（舊版格式），多個時存陣列
   const custom = src.custom && Object.keys(src.custom).length ? { ...src.custom } : null;
   return {
     ...rest,
-    ...(g ? { gradient: { key: g.key, target: g.target, dir: g.dir } } : {}),
+    ...(g.length ? { gradient: g.length === 1 ? g[0] : g } : {}),
     ...(custom ? { custom } : {}),
   };
 }

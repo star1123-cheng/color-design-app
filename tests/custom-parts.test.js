@@ -60,7 +60,7 @@ test('驗證：custom 可省略；元件或顏色不對時不通過', () => {
 
 test('收藏：元件配色和漸層一起保存，套用時還原；改了元件配色會更新原本那筆', () => {
   const s = memStorage();
-  let st = setPartColor({ ...createState(), gradient: 'main' }, 'background', '#FFF8E7');
+  let st = setPartColor({ ...createState(), gradients: [{ key: 'main', target: 'hero', dir: 'diag' }] }, 'background', '#FFF8E7');
   assert.equal(addFavorite(paletteForFavorite(P, st), s).ok, true);
   let [saved] = loadFavorites(s).palettes;
   assert.deepEqual(saved.custom, { background: '#FFF8E7' });
@@ -75,7 +75,7 @@ test('收藏：元件配色和漸層一起保存，套用時還原；改了元�
 
   const back = applyFavorite(createState(), saved);
   assert.deepEqual(back.custom, { background: '#FFF8E7', button: 'secondary' });
-  assert.equal(back.gradient, 'main');
+  assert.equal(back.gradients[0].key, 'main');
   assert.deepEqual(applyFavorite(back, { ...P }).custom, {}, '收藏沒有元件配色時清空');
   assert.ok(!('custom' in paletteForFavorite(P, createState())), '沒有自訂時不寫 custom 欄位');
 });

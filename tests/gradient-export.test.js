@@ -6,9 +6,12 @@ import { hueDiff } from '../src/color/oklch.js';
 import { pickGradient, gradientCss, GRADIENT_TARGETS, GRADIENT_DIRS } from '../src/color/gradient.js';
 import { hexList, rgbList, cssVariables, cssOklch, slidesThemeText, selectedGradient } from '../src/export/formats.js';
 import { toYaml, toFullPrompt } from '../src/export/ai-prompt.js';
-import { createState, gradientSelection, paletteForFavorite, applyFavorite } from '../src/state.js';
+import { createState, gradientSelections, paletteForFavorite, applyFavorite } from '../src/state.js';
 import { addFavorite, loadFavorites, STORAGE_KEY } from '../src/data/favorites.js';
 import { validatePalette } from '../src/data/schema.js';
+
+/** 狀態：只選用一個漸層 */
+const withGrad = (key, target = 'hero', dir = 'diag') => ({ ...createState(), gradients: [{ key, target, dir }] });
 
 const HEXES = ['#78A5CE', '#E07A5F', '#2F6B4F', '#F2C94C', '#7A5C99', '#74AECF'];
 
@@ -52,7 +55,10 @@ test('pickGradient：未選回傳 null；不認得的用途與方向改用預設
 });
 
 test('狀態預設：沒有選漸層、用在橫幅、斜角', () => {
-  assert.deepEqual(gradientSelection(createState()), { key: null, target: 'hero', dir: 'diag' });
+  const st = createState();
+  assert.deepEqual(gradientSelections(st), []);
+  assert.equal(st.gradientTarget, 'hero');
+  assert.equal(st.gradientDir, 'diag');
 });
 
 test('匯出：沒選漸層時內容與舊版相同；選了之後每種格式都附上漸層', () => {
@@ -90,7 +96,7 @@ const memStorage = () => {
 
 test('收藏：選定的漸層一起保存，讀回後可還原用途與方向', () => {
   const [p] = recommend('#78A5CE');
-  const st = { ...createState(), gradient: 'analog', gradientTarget: 'button', gradientDir: 'radial' };
+  const st = withGrad('analog', 'button', 'radial');
   const s = memStorage();
   const r = addFavorite(paletteForFavorite(p, st), s);
   assert.equal(r.ok, true);
@@ -98,7 +104,7 @@ test('收藏：選定的漸層一起保存，讀回後可還原用途與方向',
   assert.deepEqual(saved.gradient, { key: 'analog', target: 'button', dir: 'radial' });
   assert.ok(!JSON.stringify(saved.gradient).includes('#'), '只存設定，不另存色碼');
   const back = applyFavorite(createState(), saved);
-  assert.deepEqual(gradientSelection(back), { key: 'analog', target: 'button', dir: 'radial' });
+  assert.deepEqual(gradientSelections(back), [{ key: 'analog', target: 'button', dir: 'radial' }]);
 });
 
 test('收藏：沒選漸層時不寫 gradient 欄位；套用沒有漸層的收藏會取消漸層', () => {
@@ -106,17 +112,17 @@ test('收藏：沒選漸層時不寫 gradient 欄位；套用沒有漸層的收�
   const s = memStorage();
   addFavorite(paletteForFavorite(p, createState()), s);
   assert.ok(!('gradient' in loadFavorites(s).palettes[0]));
-  const back = applyFavorite({ ...createState(), gradient: 'main' }, loadFavorites(s).palettes[0]);
-  assert.equal(back.gradient, null);
+  const back = applyFavorite(withGrad('main'), loadFavorites(s).palettes[0]);
+  assert.deepEqual(back.gradients, []);
 });
 
 test('收藏：同一組五色換了漸層，更新原本那筆，不重複新增', () => {
   const [p] = recommend('#6B9274');
   const s = memStorage();
-  const base = { ...createState(), gradient: 'soft' };
+  const base = withGrad('soft');
   assert.equal(addFavorite(paletteForFavorite(p, base), s).ok, true);
   assert.match(addFavorite(paletteForFavorite(p, base), s).message, /已經在收藏/);
-  const r = addFavorite(paletteForFavorite(p, { ...base, gradient: 'deep', gradientDir: 'h' }), s);
+  const r = addFavorite(paletteForFavorite(p, withGrad('deep', 'hero', 'h')), s);
   assert.equal(r.ok, true);
   assert.match(r.message, /更新/);
   const list = loadFavorites(s).palettes;

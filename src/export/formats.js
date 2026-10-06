@@ -1,8 +1,9 @@
 // 匯出格式（SPEC 第 6 節）：HEX 清單、RGB、CSS 變數、oklch() 版本、Google 簡報主題色對應。
 // 全部從 SPEC 3.1 的配色 JSON 產生，不另存資料。
 // 2026-10-06 使用者新增：選定的漸層（g，由 selectedGradient 產生）會附在每種格式後面；沒選時內容與舊版相同。
+// 2026-10-07 使用者新增：g 也可以是多個漸層的陣列（由 selectedGradients 產生），依序全部附上。
 import { toOklchString, toRgbString } from '../color/oklch.js';
-import { pickGradient, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
+import { pickGradient, pickGradients, GRADIENT_TARGETS, GRADIENT_DIRS } from '../color/gradient.js';
 import { minTextContrast } from '../data/presets.js';
 import { customEntries, partVar } from '../data/parts.js';
 import { oklchToHex } from '../color/gamut.js';
@@ -22,6 +23,15 @@ export function selectedGradient(p, sel) {
   return pickGradient(p.colors, { ...sel, min });
 }
 
+/** 多個選用的漸層（2026-10-07 使用者新增：可同時多個；用原始配色計算） */
+export function selectedGradients(p, sels) {
+  const min = minTextContrast(p.context?.scene ?? 'slides', Boolean(p.context?.projection));
+  return pickGradients(p.colors, sels, min);
+}
+
+/** 匯出函式的 g 可以是單一漸層、漸層陣列或 null，統一成陣列 */
+export const asGradients = (g) => (Array.isArray(g) ? g : g ? [g] : []);
+
 /** 漸層的中文說明（名稱、用途、方向、字色），各格式共用 */
 export const gradientNote = (g) => `${g.name}，用在${GRADIENT_TARGETS[g.target].label}，${GRADIENT_DIRS[g.dir].desc}`
   + `，${g.text.hex ? `上面的字用 ${g.text.hex}` : '上面放字要先加一塊底色'}`;
@@ -35,14 +45,15 @@ const customSection = (p, custom, fmt) => {
     : '';
 };
 
-const listWithGradient = (lines, g, fmt) => (g
-  ? `${lines}\n\n漸層（${gradientNote(g)}）\n${g.stops.map(fmt).join(' → ')}`
-  : lines);
+const listWithGradient = (lines, g, fmt) => [lines,
+  ...asGradients(g).map((x) => `漸層（${gradientNote(x)}）\n${x.stops.map(fmt).join(' → ')}`)].join('\n\n');
+/** CSS 變數名稱：同一種漸層用在多個位置時，加上用途區分 */
+const gradVar = (x, list) => (list.filter((y) => y.key === x.key).length > 1 ? `--gradient-${x.key}-${x.target}` : `--gradient-${x.key}`);
 const cssWithGradient = (vars, g, p, custom) => {
   const parts = customEntries(custom, p.colors);
-  return `:root {\n${vars.join('\n')}${g
-    ? `\n  /* 漸層：${gradientNote(g)} */\n  --gradient-${g.key}: ${g.css};`
-    : ''}${parts.length
+  const grads = asGradients(g);
+  return `:root {\n${vars.join('\n')}${grads
+    .map((x) => `\n  /* 漸層：${gradientNote(x)} */\n  ${gradVar(x, grads)}: ${x.css};`).join('')}${parts.length
     ? `\n  /* 元件配色（自訂） */\n${parts.map((e) => `  ${partVar(e.key)}: ${e.hex}; /* ${e.label} */`).join('\n')}`
     : ''}\n}`;
 };
@@ -98,7 +109,7 @@ export function slidesTheme(p) {
 /** Google 簡報：主題色沒有漸層欄位，漸層請在「背景」或圖案「填滿顏色」→「漸層」→「自訂」設定 */
 export const slidesThemeText = (p, g = null, custom = null) => {
   const theme = slidesTheme(p).map((x) => `${x.field}：${x.hex}（${x.from}）`).join('\n');
-  return (g
-    ? `${theme}\n\n漸層（${gradientNote(g)}）\n${g.stops.map((s) => s.hex).join(' → ')}\n設定位置：背景或圖案的「填滿顏色」→「漸層」→「自訂」`
+  return (asGradients(g).length
+    ? `${listWithGradient(theme, g, (s) => s.hex)}\n設定位置：背景或圖案的「填滿顏色」→「漸層」→「自訂」`
     : theme) + customSection(p, custom, (hex) => hex);
 };

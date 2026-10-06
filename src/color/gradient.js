@@ -138,3 +138,22 @@ export function pickGradient(colors, { key, target = 'hero', dir = 'diag', min =
   const g = gradientSuggestions(colors, { min, dir: d }).find((x) => x.key === key);
   return g ? { ...g, dir: d, target: t } : null;
 }
+
+/**
+ * 同時選用多個漸層（2026-10-07 使用者新增）：每個用途（GRADIENT_TARGETS）最多一個。
+ * 接受舊格式（單一物件）或新格式（陣列），回傳依用途順序排好、去掉不正確項目的陣列；同一用途重複時以後面的為準。
+ * @param {unknown} v null、{ key, target, dir } 或其陣列
+ * @returns {{ key: string, target: string, dir: string }[]}
+ */
+export function gradientList(v) {
+  const byTarget = {};
+  for (const g of Array.isArray(v) ? v : v ? [v] : []) {
+    if (!g || !GRADIENT_KEYS.includes(g.key) || !Object.hasOwn(GRADIENT_TARGETS, g.target ?? '')) continue;
+    byTarget[g.target] = { key: g.key, target: g.target, dir: Object.hasOwn(GRADIENT_DIRS, g.dir ?? '') ? g.dir : 'diag' };
+  }
+  return Object.keys(GRADIENT_TARGETS).filter((t) => byTarget[t]).map((t) => byTarget[t]);
+}
+
+/** 多個選用的漸層一次算好（沒選或 key 不存在的略過） */
+export const pickGradients = (colors, sels, min = 4.5) =>
+  gradientList(sels).map((s) => pickGradient(colors, { ...s, min })).filter(Boolean);

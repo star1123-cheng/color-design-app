@@ -6,7 +6,7 @@ import { contrastRatio, bestTextOn, adjustForContrast, CONTRAST } from '../color
 import { ratioBar } from './cards.js';
 import { simulateColors } from '../color/cvd.js';
 import { quantize } from '../color/gamut.js';
-import { pickGradient } from '../color/gradient.js';
+import { pickGradients } from '../color/gradient.js';
 import { hexToOklch } from '../color/oklch.js';
 import { PARTS, isPartValue, resolvePart } from '../data/parts.js';
 
@@ -22,8 +22,8 @@ function titleColor(c) {
   return adj.ok ? adj.hex : c.text.hex;
 }
 
-// 漸層（2026-10-06 使用者新增：自選用在哪個元件）。g 為 pickGradient 的結果，target 決定套在哪裡
-const on = (g, target) => (g && g.target === target ? g : null);
+// 漸層（2026-10-06 使用者新增：自選用在哪個元件；2026-10-07 起可同時多個）。g 為 pickGradients 的結果，依 target 找出套在哪裡
+const on = (g, target) => g.find((x) => x.target === target) ?? null;
 /** 漸層上的字色：可用時用漸層建議的字色，否則取中間色上對比最高的黑或白 */
 const textOnGrad = (g) => g.text.hex ?? bestTextOn(g.stops[Math.floor(g.stops.length / 2)].hex).hex;
 /** 整頁背景：漸層上的字不夠清楚時保留原字色（漸層建議區會提醒要加底塊） */
@@ -155,14 +155,14 @@ function applyCustom(node, custom, c, sim) {
 
 /**
  * 依類型渲染預覽，並更新面積比例條。
- * @param {{ simulate?: string, gradient?: { key: string|null, target: string, dir: string }|null, minText?: number, scale?: { title: number, body: number }, custom?: Record<string, string>, picked?: string|null }} [opts]
- *   simulate：none、gray、protan、deutan、tritan；gradient：選定的漸層（key、用在哪個元件、方向）；
+ * @param {{ simulate?: string, gradient?: { key: string, target: string, dir: string }[]|null, minText?: number, scale?: { title: number, body: number }, custom?: Record<string, string>, picked?: string|null }} [opts]
+ *   simulate：none、gray、protan、deutan、tritan；gradient：選用的漸層（每個含 key、用在哪個元件、方向，可多個）；
  *   minText：放字需要的對比度；scale：字級倍率；custom：元件配色；picked：正在調整的元件（加外框提示）
  */
 export function renderPreview(stage, palette, type, ratioEl, { simulate = 'none', gradient = null, minText = 4.5, scale = null, custom = {}, picked = null } = {}) {
   const colors = simulateColors(palette.colors, simulate);
   // 漸層用模擬後的顏色重算，黑白與色弱模擬時也看得到漸層的樣子
-  const g = gradient?.key ? pickGradient(colors, { ...gradient, min: minText }) : null;
+  const g = pickGradients(colors, gradient, minText);
   const node = (RENDER[type] ?? slide)(colors, g);
   applyCustom(node, custom ?? {}, colors, (hex) => simulateColors({ x: { hex } }, simulate).x.hex);
   if (picked) for (const el of [node, ...node.querySelectorAll('[data-part]')]) el.classList.toggle('is-picked', el.dataset.part === picked);
