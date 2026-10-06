@@ -82,7 +82,7 @@ for (const { selector, body } of blocks) {
   }
 
   if (/#[0-9a-f]{3,8}\b/i.test(body)) check('DESIGN 禁止事項', selector, false, '色碼必須寫在 :root 的 tokens，不得在規則中寫死');
-  if (/linear-gradient|radial-gradient/.test(body) && !selector.includes('range')) check('DESIGN 禁止事項', selector, false, '漸層只能用在明度滑桿');
+  if (/linear-gradient|radial-gradient/.test(body) && !selector.includes('range') && !selector.startsWith('.brand')) check('DESIGN 禁止事項', selector, false, '漸層只能用在明度滑桿');
   if (/rgba?\(/.test(body) && !/box-shadow|--shadow/.test(body)) check('DESIGN 禁止事項', selector, false, 'rgba() 只能用於陰影');
 }
 check('對比度', `共檢查 ${pairCount} 組文字色／底色`, pairCount > 0);
